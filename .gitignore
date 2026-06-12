@@ -11,3 +11,9 @@ dist/
 *.log
 media/
 staticfiles/
+.zip
+
+**/migrations/*.py
+!**/migrations/__init__.py
+*.lock
+**/package-lock.json

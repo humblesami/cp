@@ -24,6 +24,7 @@ function createGameState(seats, dealerSeat = 0) {
       cards: { 0: null, 1: null, 2: null, 3: null },
     },
     trickWinners: [],             // seat indices of trick winners in order
+    completedTricks: [],          // full trick history of the current hand
     score: { A: 0, B: 0 },       // match score (hands won)
     handResults: [],              // history of hand results
     startedAt: Date.now(),
@@ -106,6 +107,12 @@ function playCard(state, seatIndex, card) {
 
   const nextTurn = handComplete ? null : trickWinner;
 
+  const completedTrick = {
+    ledBy: newTrick.ledBy,
+    cards: newTrick.cards,
+    winner: trickWinner,
+  };
+
   const newState = {
     ...state,
     hands: newHands,
@@ -113,6 +120,7 @@ function playCard(state, seatIndex, card) {
       ? { ledBy: null, cards: { 0: null, 1: null, 2: null, 3: null } }
       : { ledBy: trickWinner, cards: { 0: null, 1: null, 2: null, 3: null } },
     trickWinners: newTrickWinners,
+    completedTricks: [...(state.completedTricks || []), completedTrick],
     turn: nextTurn,
     score: newScore,
     phase: newPhase,
@@ -140,6 +148,7 @@ function startNewHand(state) {
     hands,
     currentTrick: { ledBy: null, cards: { 0: null, 1: null, 2: null, 3: null } },
     trickWinners: [],
+    completedTricks: [],
   };
 }
 
@@ -158,6 +167,7 @@ function getPlayerView(state, seatIndex) {
     handSizes: state.hands.map((h) => h.length),
     currentTrick: state.currentTrick,
     trickWinners: state.trickWinners,
+    completedTricks: state.completedTricks || [],
     score: state.score,
     seats: state.seats,
     lastHandResult: state.handResults[state.handResults.length - 1] || null,

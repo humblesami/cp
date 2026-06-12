@@ -1,15 +1,13 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: courtpiece
-      POSTGRES_USER: courtpiece
-      POSTGRES_PASSWORD: courtpiece_dev
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: 123
     ports:
-      - "5432:5432"
+      - "5440:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -28,7 +26,7 @@ services:
       - "8000:8000"
     environment:
       - DEBUG=True
-      - DATABASE_URL=postgres://courtpiece:courtpiece_dev@postgres:5432/courtpiece
+      - DATABASE_URL=postgres://odoo:123@postgres:5432/courtpiece
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=dev-secret-key-change-in-production
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}

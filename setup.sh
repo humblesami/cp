@@ -29,8 +29,8 @@ fi
 
 # 3. Install Node deps (for local dev without Docker)
 echo -e "\n${YELLOW}Installing Node.js dependencies…${NC}"
-cd backend-node && npm install && cd ..
-cd frontend && npm install && cd ..
+cd backend-node && yarn install && cd ..
+cd frontend && yarn install && cd ..
 echo "✓ Node deps installed"
 
 # 4. Python venv for Django (optional local run)
@@ -38,7 +38,7 @@ echo -e "\n${YELLOW}Setting up Python virtual environment…${NC}"
 cd backend-django
 python3 -m venv .venv
 source .venv/bin/activate
-pip install --quiet -r requirements.txt
+pip install -r requirements.txt
 deactivate
 cd ..
 echo "✓ Python deps installed"
@@ -52,10 +52,10 @@ sleep 3
 echo -e "\n${YELLOW}Running Django migrations…${NC}"
 cd backend-django
 source .venv/bin/activate
-export DATABASE_URL=postgres://courtpiece:courtpiece_dev@localhost:5432/courtpiece
-export SECRET_KEY=dev-secret-key
+export DATABASE_URL=postgres://odoo:123@localhost:5440/courtpiece
+export SECRET_KEY=hdslM94Mf*a6ZG62VV^n$s
 python manage.py migrate
-python manage.py createsuperuser --no-input --username admin --email admin@local.dev 2>/dev/null || true
+python manage.py createsuperuser --no-input --username admin --email [EMAIL_ADDRESS] 2>/dev/null || true
 deactivate
 cd ..
 echo "✓ Migrations done (admin user: admin / changeme)"

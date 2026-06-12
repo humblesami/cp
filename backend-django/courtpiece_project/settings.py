@@ -61,7 +61,7 @@ WSGI_APPLICATION = "courtpiece_project.wsgi.application"
 # Database
 DATABASES = {
     "default": dj_database_url.config(
-        default=config("DATABASE_URL", default="postgres://courtpiece:courtpiece_dev@localhost:5432/courtpiece")
+        default=config("DATABASE_URL", default="postgres://odoo:123@localhost:5440/courtpiece")
     )
 }
 
