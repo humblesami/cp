@@ -20,7 +20,7 @@ services:
       - redis_data:/data
 
   django:
-    build: ./backend-django
+    build: ./django
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -37,7 +37,7 @@ services:
       - postgres
       - redis
     volumes:
-      - ./backend-django:/app
+      - ./django:/app
 
   node:
     build: ./backend-node

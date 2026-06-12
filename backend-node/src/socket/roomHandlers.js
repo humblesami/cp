@@ -1,4 +1,4 @@
-const { createRoom, getRoom, joinRoom, leaveRoom, markDisconnected, markReconnected } = require("../redis/rooms");
+const { createRoom, getRoom, joinRoom, leaveRoom, markDisconnected, markReconnected, findActiveRoomByUserId } = require("../redis/rooms");
 const { getGameState } = require("../redis/gameState");
 const { createGameState, getPlayerView } = require("../game-engine/engine");
 const { saveGameState } = require("../redis/gameState");
@@ -9,6 +9,37 @@ const BOT_SUBSTITUTION_DELAY_MS = 30000;
 
 function registerRoomHandlers(io, socket) {
   const { user } = socket;
+
+  // ── Check Active Game ──────────────────────────────────
+  socket.on("check_active_game", async (_, callback) => {
+    try {
+      const active = await findActiveRoomByUserId(user.id);
+      if (active) {
+        // Automatically join the socket room again and set state
+        socket.join(active.roomId);
+        socket.currentRoomId = active.roomId;
+
+        // Cancel any pending bot timer for this user (reconnect scenario)
+        const timerKey = `${active.roomId}:${user.id}`;
+        if (disconnectTimers.has(timerKey)) {
+          clearTimeout(disconnectTimers.get(timerKey));
+          disconnectTimers.delete(timerKey);
+        }
+
+        // Mark them as reconnected in Redis
+        await markReconnected(active.roomId, user.id);
+        
+        // Broadcast that they reconnected
+        io.to(active.roomId).emit("player_reconnected", { userId: user.id, username: user.username });
+
+        callback?.({ ok: true, inGame: true, roomId: active.roomId, status: active.status });
+      } else {
+        callback?.({ ok: true, inGame: false });
+      }
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
 
   // ── Create Room ────────────────────────────────────────
   socket.on("create_room", async ({ name, isPrivate = false }, callback) => {
@@ -33,7 +64,23 @@ function registerRoomHandlers(io, socket) {
   // ── Join Room ──────────────────────────────────────────
   socket.on("join_room", async ({ roomId }, callback) => {
     try {
-      const { seatIndex, playerCount, status } = await joinRoom(roomId, user.id, user.username);
+      let seatIndex, playerCount, status;
+      try {
+        const joinRes = await joinRoom(roomId, user.id, user.username);
+        seatIndex = joinRes.seatIndex;
+        playerCount = joinRes.playerCount;
+        status = joinRes.status;
+      } catch (err) {
+        if (err.message === "ALREADY_IN_ROOM") {
+          const room = await getRoom(roomId);
+          if (!room) throw new Error("ROOM_NOT_FOUND");
+          seatIndex = Object.values(room.seats).findIndex((s) => s && s.userId === user.id);
+          playerCount = Object.values(room.seats).filter(Boolean).length;
+          status = room.status;
+        } else {
+          throw err;
+        }
+      }
 
       socket.join(roomId);
       socket.currentRoomId = roomId;
@@ -43,20 +90,21 @@ function registerRoomHandlers(io, socket) {
       if (disconnectTimers.has(timerKey)) {
         clearTimeout(disconnectTimers.get(timerKey));
         disconnectTimers.delete(timerKey);
-        await markReconnected(roomId, user.id);
+      }
+      
+      await markReconnected(roomId, user.id);
 
-        // Re-send game state to reconnecting player
-        const gameState = await getGameState(roomId);
-        if (gameState) {
-          socket.emit("game_state_snapshot", getPlayerView(gameState, seatIndex));
-        }
+      // Re-send game state to reconnecting player
+      const gameState = await getGameState(roomId);
+      if (gameState) {
+        socket.emit("game_state_snapshot", getPlayerView(gameState, seatIndex));
       }
 
       const room = await getRoom(roomId);
       io.to(roomId).emit("player_joined", { room, newPlayer: { userId: user.id, username: user.username, seatIndex } });
 
       // Auto-start when 4 players seated
-      if (playerCount === 4) {
+      if (playerCount === 4 && status !== "in_progress") {
         setTimeout(() => startGame(io, roomId, room), 3000);
         io.to(roomId).emit("game_starting", { countdown: 3 });
       }
@@ -105,6 +153,14 @@ function registerRoomHandlers(io, socket) {
         gameState.seats[seat].isBot = true;
         await saveGameState(roomId, gameState);
         io.to(roomId).emit("bot_substituted", { seat, username: user.username });
+
+        // Trigger bot action if it was this player's turn
+        const { triggerBotPlay, triggerBotTrump } = require("./gameHandlers");
+        if (gameState.phase === "trump_selection" && gameState.trumpCallerSeat === seat) {
+          setTimeout(() => triggerBotTrump(io, roomId, gameState, seat), 1200);
+        } else if (gameState.phase === "playing" && gameState.turn === seat) {
+          setTimeout(() => triggerBotPlay(io, roomId, gameState, seat), 1200);
+        }
       }
     }, BOT_SUBSTITUTION_DELAY_MS);
 
@@ -124,6 +180,12 @@ async function startGame(io, roomId, room) {
     if (seatIndex >= 0) {
       s.emit("game_started", getPlayerView(gameState, seatIndex));
     }
+  }
+
+  // If initial trump caller is a bot, trigger trump selection
+  if (gameState.seats[gameState.trumpCallerSeat]?.isBot) {
+    const { triggerBotTrump } = require("./gameHandlers");
+    setTimeout(() => triggerBotTrump(io, roomId, gameState, gameState.trumpCallerSeat), 1200);
   }
 }
 

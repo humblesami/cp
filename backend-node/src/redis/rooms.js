@@ -152,4 +152,28 @@ async function markReconnected(roomId, userId) {
   await redis.hSet(roomKey(roomId), { seats: JSON.stringify(seats) });
 }
 
-module.exports = { createRoom, getRoom, listPublicRooms, joinRoom, leaveRoom, markDisconnected, markReconnected };
+async function findActiveRoomByUserId(userId) {
+  const redis = getRedis();
+  const keys = await redis.keys("room:*");
+  for (const key of keys) {
+    const data = await redis.hGetAll(key);
+    if (!data.id) continue;
+    const seats = JSON.parse(data.seats);
+    const inRoom = Object.values(seats).some((s) => s && s.userId === userId);
+    if (inRoom) {
+      return { roomId: data.id, status: data.status };
+    }
+  }
+  return null;
+}
+
+module.exports = { 
+  createRoom, 
+  getRoom, 
+  listPublicRooms, 
+  joinRoom, 
+  leaveRoom, 
+  markDisconnected, 
+  markReconnected,
+  findActiveRoomByUserId
+};

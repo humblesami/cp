@@ -24,3 +24,5 @@ export async function query(text, params) {
     console.log('Executed query', { text, duration, rows: res.rowCount });
     return res;
 }
+
+export { pool };

@@ -1,7 +1,7 @@
 const { getGameState, saveGameState, deleteGameState } = require("../redis/gameState");
 const { getRoom } = require("../redis/rooms");
 const { declareTrump, playCard, startNewHand, getPlayerView } = require("../game-engine/engine");
-const { botChooseCard } = require("../game-engine/bot");
+const { botChooseCard, botChooseTrump } = require("../game-engine/bot");
 const axios = require("axios");
 
 function registerGameHandlers(io, socket) {
@@ -102,7 +102,7 @@ async function processCardPlay(io, roomId, state, seatIndex, card) {
     if (newState.phase === "match_over") {
       const matchWinner = newState.score.A >= 7 ? "A" : "B";
       io.to(roomId).emit("match_over", { winner: matchWinner, score: newState.score });
-      await recordMatchToDjango(roomId, newState, matchWinner);
+      await recordMatchToNextjs(roomId, newState, matchWinner);
       await deleteGameState(roomId);
       return;
     }
@@ -144,14 +144,37 @@ async function broadcastPlayerViews(io, roomId, state) {
   }
 }
 
-async function recordMatchToDjango(roomId, state, winningTeam) {
+async function triggerBotTrump(io, roomId, state, botSeat) {
+  const fresh = await getGameState(roomId);
+  if (!fresh || fresh.phase !== "trump_selection" || fresh.trumpCallerSeat !== botSeat) return;
+
+  const trumpSuit = botChooseTrump(fresh.hands[botSeat]);
+  const newState = declareTrump(fresh, botSeat, trumpSuit);
+  await saveGameState(roomId, newState);
+
+  io.to(roomId).emit("trump_declared", { 
+    trump: trumpSuit, 
+    callerSeat: botSeat, 
+    callerUsername: fresh.seats[botSeat]?.username || "Bot" 
+  });
+  await broadcastPlayerViews(io, roomId, newState);
+
+  // After declaring trump, the bot also leads the first trick!
+  if (newState.turn === botSeat) {
+    setTimeout(() => triggerBotPlay(io, roomId, newState, botSeat), 1200);
+  }
+}
+
+async function recordMatchToNextjs(roomId, state, winningTeam) {
   try {
     const teamASeats = [0, 2];
     const teamBSeats = [1, 3];
     const teamAIds = teamASeats.map((i) => state.seats[i]?.userId).filter(Boolean);
     const teamBIds = teamBSeats.map((i) => state.seats[i]?.userId).filter(Boolean);
 
-    await axios.post(`${process.env.DJANGO_API_URL}/api/matches/record/`, {
+    const frontendUrl = process.env.FRONTEND_API_URL || "http://localhost:3000";
+
+    await axios.post(`${frontendUrl}/api/matches/record`, {
       room_id: roomId,
       team_a_user_ids: teamAIds,
       team_b_user_ids: teamBIds,
@@ -161,16 +184,13 @@ async function recordMatchToDjango(roomId, state, winningTeam) {
       court_achieved: state.handResults.some((r) => r.isCourt),
       coat_achieved: state.handResults.some((r) => r.isCoat),
       started_at: new Date(state.startedAt).toISOString(),
-    }, {
-      headers: { Authorization: `Bearer ${process.env.DJANGO_SERVICE_TOKEN}` },
     });
   } catch (err) {
-    console.error("Failed to record match to Django:", err.message);
-    // Non-fatal — game still concludes
+    console.error("Failed to record match to Next.js API:", err.message);
   }
 }
 
 function getTeamOf(seat) { return seat % 2 === 0 ? "A" : "B"; }
 function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-module.exports = { registerGameHandlers };
+module.exports = { registerGameHandlers, triggerBotPlay, triggerBotTrump };

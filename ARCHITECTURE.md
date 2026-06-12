@@ -20,23 +20,25 @@ This is **not** a monolith. It's three independently-runnable services plus two 
 ┌─────────────────┐     WebSocket      ┌──────────────────┐
 │   FRONTEND       │ ◄────────────────► │   NODE SERVER     │
 │   (Next.js)      │                     │  (Socket.io)      │
-│   Port 3000      │     REST (login)    │   Port 3001       │
-│                  │ ──────────────────► │                   │
+│   Port 3000      │    HTTP (record)    │   Port 3001       │
+│                  │ ◄────────────────── │                   │
 └────────┬─────────┘                     └─────────┬─────────┘
          │                                          │
-         │ NextAuth OAuth                  Redis (live state)
+         │ SQL Queries (pg)                Redis (live state)
          │                                          │
          ▼                                          ▼
-┌─────────────────┐    REST (record match) ┌──────────────────┐
-│   DJANGO         │ ◄──────────────────────│      REDIS        │
-│  (Auth + DB)     │                         │  rooms, games,    │
-│   Port 8000      │                         │  join locks       │
-└────────┬─────────┘                         └──────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│   POSTGRES       │
-│  users, matches  │
+┌─────────────────┐                        ┌──────────────────┐
+│    POSTGRES     │                        │      REDIS        │
+│ (users_user,    │                        │  rooms, games,    │
+│  matches_match) │                        │  join locks       │
+└─────────────────┘                        └──────────────────┘
+         ▲
+         │ Shared DB access
+┌────────┴────────┐
+│     DJANGO      │
+│ (Migrations &   │
+│  Admin Panel)   │
+│   Port 8000     │
 └─────────────────┘
 ```
 
@@ -44,12 +46,12 @@ This is **not** a monolith. It's three independently-runnable services plus two 
 
 | Service | Owns | Why it's separate |
 |---|---|---|
-| **Django** | User accounts, OAuth, match history, admin dashboard | Slow-changing data needs ACID guarantees and a good admin UI. Django gives us both for free. |
-| **Node.js** | Live game state, WebSocket connections, turn logic | Sockets need to stay open and push instantly. Node's event loop is built for this; Django is not. |
-| **Redis** | Active room seats, in-progress game state, join locks | Game state is *temporary* (deleted when the game ends) and needs atomic operations for the race-condition fix. Doesn't belong in Postgres. |
-| **Next.js** | All UI | Standard SPA-ish frontend, talks to Node via sockets and Django via REST/NextAuth. |
+| **Django** | DB Migrations & admin dashboard (Port 8000) | Provides schema migration files and an out-of-the-box admin panel. Does NOT sit in the runtime authentication or gameplay loop. |
+| **Node.js** | Live game state, WebSocket connections, turn logic (Port 3001) | Sockets stay open and push instantly. Authenticates sockets using NextAuth-issued JWTs. |
+| **Redis** | Active room seats, in-progress game state, join locks | Temporary game state and locks. Avoids hammering Postgres with live state updates. |
+| **Next.js** | UI, NextAuth Social Logins, Postgres DB connections (Port 3000) | Authenticates OAuth users, updates database user records directly, and exposes internal API `/api/matches/record` for Node.js. |
 
-**Golden rule**: Django never knows about live game state. Node never stores permanent data. If you're tempted to query Postgres from Node mid-game, or push live card data into Django — stop, that's a sign you're breaking the boundary.
+**Golden rule**: Node never stores permanent data. If you're tempted to query Postgres from Node mid-game, or push live card data into Node memory — stop, that's a sign you're breaking the boundary. All database updates run asynchronously via Next.js backend API endpoints.
 
 ---
 
@@ -209,10 +211,11 @@ Match
 
 1. User clicks "Continue with Google" on `frontend/src/app/page.jsx`
 2. NextAuth (`app/api/auth/[...nextauth]/route.js`) handles the OAuth redirect
-3. **[Integration point — currently a TODO]**: NextAuth's `jwt` callback should call Django's social auth pipeline (`apps/users/pipeline.py` → `issue_jwt_tokens`) to get a Django-issued JWT
-4. That JWT is stored in the NextAuth session as `session.djangoAccess`
+3. NextAuth `signIn` callback queries PostgreSQL directly using `pg` to insert or update the user in the `users_user` table.
+4. NextAuth's `jwt` callback signs a custom JWT containing `{ user_id, username }` using a shared `JWT_SECRET` and stores it in `session.djangoAccess`.
 5. `useSocket.js` reads `session.djangoAccess` and passes it as `auth.token` when connecting to Socket.io
-6. Node's `middleware/auth.js` verifies this JWT on every socket connection and attaches `socket.user = { id, username }`
+6. Node's `middleware/auth.js` verifies this JWT against the shared `JWT_SECRET` on every socket connection and attaches `socket.user = { id, username }`
+
 
 ### 6.2 Creating a room
 
@@ -277,7 +280,7 @@ This is `processCardPlay()` in `gameHandlers.js`, called for both human AND bot 
 3. Broadcast `card_played` (everyone sees the card immediately — this is the "as soon as a player plays a card, all others see it" requirement)
 4. If trick complete → broadcast `trick_won` after a 500ms delay (for animation pacing)
 5. If hand complete → broadcast `hand_complete` after 1.5s, with `result` and updated `score`
-6. If match over → broadcast `match_over`, call `recordMatchToDjango()` (POSTs to `/api/matches/record/`), delete the Redis game state
+6. If match over → broadcast `match_over`, call `recordMatchToNextjs()` (POSTs to Next.js `/api/matches/record`), delete the Redis game state
 7. Otherwise, `broadcastPlayerViews()` sends each player their updated `state_update`
 8. **Bot check**: if the next `turn` belongs to a seat where `isBot: true`, schedule `triggerBotPlay()` after 1.2s — which calls `botChooseCard()` from `bot.js` and recursively calls `processCardPlay()` again
 
@@ -328,9 +331,9 @@ bot_substituted           inline                   notification
 
 These are intentional simplifications in the skeleton — not bugs, but incomplete:
 
-1. **NextAuth ↔ Django JWT exchange** is a TODO in `app/api/auth/[...nextauth]/route.js`. Social login UI works, but the token bridge needs implementation.
+1. **NextAuth direct-to-Postgres auth** has been implemented. User entries are saved/updated automatically in the `users_user` table.
 2. **Player quits during `hand_complete`**: room ends up with 3 players and no mechanism to add a 4th or convert to bot. Needs a decision: auto-bot the empty seat, or close the room.
-3. **No `DJANGO_SERVICE_TOKEN`** is actually issued anywhere — `recordMatchToDjango()` expects one in env vars for server-to-server auth. Needs a service account / static token setup in Django.
+3. **Match Recording Endpoint**: Expose an API route `/api/matches/record` in Next.js. The Node.js server calls this endpoint directly to persist match records using raw SQL transactions.
 4. **No private room join-by-code UI** — backend supports `isPrivate` flag but frontend always creates public rooms and there's no "join by code" input.
 5. **Reconnect flow** re-sends `game_state_snapshot` but the frontend's `room/[id]/page.jsx` doesn't yet handle resuming directly into `/game/[id]` if a game is already in progress when the page loads (it only redirects on the `gamePhase` socket event firing *after* mount).
 6. **Bot logic** is a simple heuristic (`game-engine/bot.js`) — it doesn't account for counting/memory of played cards beyond the current trick. Fine for v1, but a "smarter bot" task should start here.

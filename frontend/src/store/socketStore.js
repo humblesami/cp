@@ -143,6 +143,10 @@ export const useSocketStore = create((set, get) => ({
     return emitWithAck(get().socket, "continue_game", {});
   },
 
+  checkActiveGame() {
+    return emitWithAck(get().socket, "check_active_game", {});
+  },
+
   sendChat(message) {
     get().socket?.emit("send_chat", { message });
   },

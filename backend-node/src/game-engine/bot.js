@@ -90,4 +90,61 @@ function highestCard(cards) {
   return [...cards].sort((a, b) => getRankValue(b) - getRankValue(a))[0];
 }
 
-module.exports = { botChooseCard };
+/**
+ * Intelligent trump choice algorithm based on first 5 cards of the hand:
+ * 1. Count cards of each suit.
+ * 2. If ties exist, choose suit with highest card rank.
+ * 3. If highest rank is same, choose suit with next highest (bigger lower) card rank.
+ * 4. If all cards in candidate suits are identical, choose randomly between them.
+ */
+function botChooseTrump(hand) {
+  const first5 = hand.slice(0, 5);
+
+  const suitsData = {};
+  for (const card of first5) {
+    const suit = getSuit(card);
+    const rankValue = getRankValue(card);
+    if (!suitsData[suit]) {
+      suitsData[suit] = { suit, count: 0, ranks: [] };
+    }
+    suitsData[suit].count += 1;
+    suitsData[suit].ranks.push(rankValue);
+  }
+
+  // Sort ranks in descending order for lexicographical comparison
+  for (const s in suitsData) {
+    suitsData[s].ranks.sort((a, b) => b - a);
+  }
+
+  const list = Object.values(suitsData);
+  let maxCount = 0;
+  for (const item of list) {
+    if (item.count > maxCount) {
+      maxCount = item.count;
+    }
+  }
+
+  const candidates = list.filter((item) => item.count === maxCount);
+
+  // Sort candidates descending by element-by-element rank comparison
+  candidates.sort((a, b) => {
+    const len = a.ranks.length;
+    for (let i = 0; i < len; i++) {
+      if (a.ranks[i] !== b.ranks[i]) {
+        return b.ranks[i] - a.ranks[i];
+      }
+    }
+    return 0;
+  });
+
+  const winner = candidates[0];
+  const ties = candidates.filter((item) => {
+    if (item.ranks.length !== winner.ranks.length) return false;
+    return item.ranks.every((val, idx) => val === winner.ranks[idx]);
+  });
+
+  const chosen = ties[Math.floor(Math.random() * ties.length)];
+  return chosen.suit;
+}
+
+module.exports = { botChooseCard, botChooseTrump };

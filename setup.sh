@@ -35,7 +35,7 @@ echo "✓ Node deps installed"
 
 # 4. Python venv for Django (optional local run)
 echo -e "\n${YELLOW}Setting up Python virtual environment…${NC}"
-cd backend-django
+cd django
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -50,12 +50,12 @@ sleep 3
 
 # 6. Run Django migrations
 echo -e "\n${YELLOW}Running Django migrations…${NC}"
-cd backend-django
+cd django
 source .venv/bin/activate
 export DATABASE_URL=postgres://odoo:123@localhost:5440/courtpiece
 export SECRET_KEY=hdslM94Mf*a6ZG62VV^n$s
 python manage.py migrate
-python manage.py createsuperuser --no-input --username admin --email [EMAIL_ADDRESS] 2>/dev/null || true
+python manage.py createsuperuser --no-input --username admin --email admin@local.dev 2>/dev/null || true
 deactivate
 cd ..
 echo "✓ Migrations done (admin user: admin / changeme)"
@@ -66,7 +66,7 @@ echo "To start the full stack:"
 echo "  docker compose up          (all services via Docker)"
 echo ""
 echo "Or run each service manually:"
-echo "  Terminal 1: cd backend-django && source .venv/bin/activate && python manage.py runserver"
+echo "  Terminal 1: cd django && source .venv/bin/activate && python manage.py runserver"
 echo "  Terminal 2: cd backend-node  && npm run dev"
 echo "  Terminal 3: cd frontend      && npm run dev"
 echo ""

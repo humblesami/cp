@@ -19,7 +19,23 @@ export const authOptions = {
   callbacks: {
     async signIn({ user, account }) {
       try {
-        const username = user.email.split("@")[0]; // Use prefix of email as username
+        let email = user.email || "";
+        let rawUsername = email ? email.split("@")[0] : "";
+        if (!rawUsername && user.name) {
+          rawUsername = user.name.replace(/\s+/g, "").toLowerCase();
+        }
+        
+        // Fallback for length < 3
+        if (!rawUsername || rawUsername.length < 3) {
+          rawUsername = "user_" + Math.random().toString(36).substring(2, 6);
+        }
+        
+        // Copy one to another if one is missing
+        if (!email) {
+          email = `${rawUsername}@courtpiece.local`;
+        }
+        
+        const username = rawUsername.substring(0, 150);
         const avatarUrl = user.image || "";
 
         // Insert or update player in Django's users_user table
@@ -31,15 +47,15 @@ export const authOptions = {
           )
           VALUES ($1, $2, '', $3, $4, false, false, true, NOW(), $5, 0, 0, 0)
           ON CONFLICT (username) 
-          DO UPDATE SET avatar_url = EXCLUDED.avatar_url
+          DO UPDATE SET avatar_url = EXCLUDED.avatar_url, email = EXCLUDED.email
           RETURNING id;
         `;
 
         const res = await query(sql, [
           username,
-          user.email,
-          user.name.split(" ")[0] || "",
-          user.name.split(" ").slice(1).join(" ") || "",
+          email,
+          user.name ? user.name.split(" ")[0] : "",
+          user.name ? user.name.split(" ").slice(1).join(" ") : "",
           avatarUrl,
         ]);
 

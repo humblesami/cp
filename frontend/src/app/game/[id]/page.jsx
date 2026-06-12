@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,7 +26,23 @@ export default function GamePage() {
     trump, turn, score, seats, trickWinners, lastHandResult,
     trumpCallerSeat, notification, clearNotification,
     declareTrump, playCard, continueGame, leaveRoom,
+    connected, joinRoom,
   } = useSocketStore();
+
+  const [joined, setJoined] = useState(false);
+
+  // Re-join the room on mount / reconnection
+  useEffect(() => {
+    if (!connected || joined) return;
+    joinRoom(roomId).then((res) => {
+      if (!res.ok) {
+        alert(res.error);
+        router.push("/lobby");
+      } else {
+        setJoined(true);
+      }
+    });
+  }, [connected, joined, roomId]);
 
   // Derived state
   const isYourTurn = turn === yourSeat;

@@ -1,0 +1,10 @@
+# NextAuth config for local development
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=dev-nextauth-secret
+JWT_SECRET=dev-jwt-secret-change-in-production
+# Postgres connection for raw queries
+DATABASE_URL=postgres://username:password@localhost:5440/db_name
+NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
+GOOGLE_CLIENT_ID=https://console.cloud.google.com/auth/clients/476822577128-emcu92ic93ojfg0auaa78iv8qgtlcp8v.apps.googleusercontent.com?project=devtest-447506
+GOOGLE_CLIENT_SECRET=xx
+

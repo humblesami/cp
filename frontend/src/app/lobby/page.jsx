@@ -8,7 +8,7 @@ import { useSocket } from "../../hooks/useSocket";
 export default function LobbyPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { connected, createRoom, joinRoom } = useSocketStore();
+  const { connected, createRoom, joinRoom, checkActiveGame } = useSocketStore();
   const [rooms, setRooms] = useState([]);
   const [newRoomName, setNewRoomName] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
@@ -17,6 +17,22 @@ export default function LobbyPage() {
   const [error, setError] = useState("");
 
   useSocket(); // initialize socket
+
+  // Check for active game to reconnect
+  useEffect(() => {
+    if (!connected) return;
+    async function checkReconnect() {
+      const res = await checkActiveGame();
+      if (res?.ok && res.inGame) {
+        if (res.status === "in_progress") {
+          router.push(`/game/${res.roomId}`);
+        } else {
+          router.push(`/room/${res.roomId}`);
+        }
+      }
+    }
+    checkReconnect();
+  }, [connected]);
 
   // Poll room list every 3 seconds
   useEffect(() => {
