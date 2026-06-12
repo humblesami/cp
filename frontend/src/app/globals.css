@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --felt-green: #1a472a;
+  --felt-dark: #0d2614;
+  --gold: #c9a84c;
+}
+
+body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  font-family: system-ui, sans-serif;
+}
+
+/* Card hover lift */
+.card-playable {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.card-playable:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Felt table texture */
+.felt-table {
+  background: radial-gradient(ellipse at center, #1e5631 0%, #0d2614 70%);
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.6), 0 0 0 8px #7c5a1e, 0 0 0 12px #5a3e0f;
+}
