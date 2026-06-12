@@ -2,7 +2,7 @@
 import clsx from "clsx";
 import PlayingCard from "./PlayingCard";
 
-export default function PlayerSeat({ seat, player, cardCount = 0, isYou = false, isTurn = false, trickCard = null, position }) {
+export default function PlayerSeat({ seat, player, cardCount = 0, isYou = false, isTurn = false, trickCard = null, position, onAvatarClick }) {
   const teamLabel = seat % 2 === 0 ? "A" : "B";
   const teamColor = seat % 2 === 0 ? "border-blue-500 text-blue-400" : "border-red-500 text-red-400";
 
@@ -16,11 +16,15 @@ export default function PlayerSeat({ seat, player, cardCount = 0, isYou = false,
   return (
     <div className={clsx("flex gap-2", positionStyles[position])}>
       {/* Avatar + Name */}
-      <div className={clsx(
-        "flex flex-col items-center gap-1 px-3 py-2 rounded-xl border-2 transition-all",
-        isTurn ? "border-yellow-400 bg-yellow-400/10 shadow-lg shadow-yellow-400/20" : teamColor + " bg-slate-800/80",
-        isYou && "ring-2 ring-white/30"
-      )}>
+      <div 
+        onClick={() => player && !player.isBot && onAvatarClick && onAvatarClick(player.userId)}
+        className={clsx(
+          "flex flex-col items-center gap-1 px-3 py-2 rounded-xl border-2 transition-all select-none",
+          player && !player.isBot && "cursor-pointer hover:bg-slate-700/50",
+          isTurn ? "border-yellow-400 bg-yellow-400/10 shadow-lg shadow-yellow-400/20" : teamColor + " bg-slate-800/80",
+          isYou && "ring-2 ring-white/30"
+        )}
+      >
         <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-lg overflow-hidden">
           {player?.avatarUrl ? (
             <img src={player.avatarUrl} alt={player.username} className="w-full h-full object-cover" />

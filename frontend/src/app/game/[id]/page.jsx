@@ -13,6 +13,7 @@ import TrumpSelector from "../../../components/table/TrumpSelector";
 import ChatPanel from "../../../components/table/ChatPanel";
 import HandCompleteModal from "../../../components/table/HandCompleteModal";
 import MatchOverModal from "../../../components/table/MatchOverModal";
+import PlayerStatsModal from "../../../components/ui/PlayerStatsModal";
 
 export default function GamePage() {
   const { id: roomId } = useParams();
@@ -30,6 +31,7 @@ export default function GamePage() {
   } = useSocketStore();
 
   const [joined, setJoined] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
 
   // Re-join the room on mount / reconnection
   useEffect(() => {
@@ -133,6 +135,7 @@ export default function GamePage() {
                 isTurn={turn === relativeSeats.top}
                 trickCard={trickCards[relativeSeats.top]}
                 position="top"
+                onAvatarClick={setSelectedPlayerId}
               />
             </div>
 
@@ -145,6 +148,7 @@ export default function GamePage() {
                 isTurn={turn === relativeSeats.left}
                 trickCard={trickCards[relativeSeats.left]}
                 position="left"
+                onAvatarClick={setSelectedPlayerId}
               />
             </div>
 
@@ -157,6 +161,7 @@ export default function GamePage() {
                 isTurn={turn === relativeSeats.right}
                 trickCard={trickCards[relativeSeats.right]}
                 position="right"
+                onAvatarClick={setSelectedPlayerId}
               />
             </div>
 
@@ -189,6 +194,7 @@ export default function GamePage() {
                 isTurn={isYourTurn}
                 trickCard={trickCards[relativeSeats.bottom]}
                 position="bottom"
+                onAvatarClick={setSelectedPlayerId}
               />
             </div>
           </div>
@@ -250,6 +256,14 @@ export default function GamePage() {
         score={score}
         yourSeat={yourSeat}
       />
+
+      {/* Player Stats Popup */}
+      {selectedPlayerId && (
+        <PlayerStatsModal
+          userId={selectedPlayerId}
+          onClose={() => setSelectedPlayerId(null)}
+        />
+      )}
     </div>
   );
 }

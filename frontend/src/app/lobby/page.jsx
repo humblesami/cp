@@ -49,8 +49,16 @@ export default function LobbyPage() {
   }, []);
 
   async function handleCreateRoom() {
-    if (!newRoomName.trim()) return;
+    if (!newRoomName.trim()) {
+      setError("Please enter a room name.");
+      return;
+    }
+    if (!connected) {
+      setError("Not connected to the game server. Please ensure the game server is running on port 3001.");
+      return;
+    }
     setLoading(true);
+    setError("");
     const res = await createRoom(newRoomName.trim(), isPrivate);
     setLoading(false);
     if (res.ok) {
@@ -61,12 +69,25 @@ export default function LobbyPage() {
   }
 
   async function handleJoinPrivateRoom() {
-    if (!joinCode.trim()) return;
+    if (!joinCode.trim()) {
+      setError("Please enter a room code.");
+      return;
+    }
+    if (!connected) {
+      setError("Not connected to the game server. Please ensure the game server is running on port 3001.");
+      return;
+    }
+    setError("");
     await handleJoinRoom(joinCode.trim());
   }
 
   async function handleJoinRoom(roomId) {
+    if (!connected) {
+      setError("Not connected to the game server. Please ensure the game server is running on port 3001.");
+      return;
+    }
     setLoading(true);
+    setError("");
     const res = await joinRoom(roomId);
     setLoading(false);
     if (res.ok) {
@@ -105,7 +126,7 @@ export default function LobbyPage() {
           />
           <button
             onClick={handleCreateRoom}
-            disabled={loading || !connected}
+            disabled={loading}
             className="bg-gold text-slate-900 font-bold px-6 py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 transition"
           >
             {loading ? "…" : "Create"}
@@ -138,7 +159,7 @@ export default function LobbyPage() {
           />
           <button
             onClick={handleJoinPrivateRoom}
-            disabled={loading || !connected || !joinCode.trim()}
+            disabled={loading || !joinCode.trim()}
             className="bg-slate-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-slate-500 disabled:opacity-50 transition"
           >
             {loading ? "…" : "Join"}

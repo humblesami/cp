@@ -1,0 +1,54 @@
+================================================================================
+COURT PIECE GAME - DIAGNOSTICS & PENDING ITEMS
+================================================================================
+
+1. GLOBAL CSS FIX FOR HOME PAGE, LOBBY PAGE, ETC.
+--------------------------------------------------------------------------------
+[x] STATUS: COMPLETED
+    - Updated `frontend/src/app/globals.css` with a high-priority global cursor style using `!important`.
+    - Added a specific rule `button:disabled, button[disabled] { cursor: not-allowed !important; }` to ensure disabled buttons show the correct "not-allowed" cursor and don't override to a pointer.
+
+--------------------------------------------------------------------------------
+2. ROOM CREATION & DISCONNECTION FEEDBACK
+--------------------------------------------------------------------------------
+[x] STATUS: COMPLETED
+    - Modified `frontend/src/app/lobby/page.jsx` to prevent buttons from being completely disabled when the socket is disconnected.
+    - Added explicit checks inside `handleCreateRoom`, `handleJoinPrivateRoom`, and `handleJoinRoom` so that if the user clicks them when disconnected, a clear error banner is displayed: "Not connected to the game server. Please ensure the game server is running on port 3001."
+    - Every click now gives visible feedback/errors in the UI instead of silently failing.
+
+--------------------------------------------------------------------------------
+3. PLAYER STATISTICS POPUP
+--------------------------------------------------------------------------------
+[x] STATUS: COMPLETED
+    - Created a Next.js API endpoint `/api/users/[id]/stats/route.js` that queries PostgreSQL to fetch the player's username, avatar, and match statistics.
+    - Formulated queries to calculate Court Piece (Rung) "courts" and "coats" (gcs) won by checking matching results in `matches_match` and team tables.
+    - Configured the API to support future prefix-based games (Rung, Blind, Bhabhi, Seep) by returning structured data for each game type.
+    - Designed and implemented the premium `PlayerStatsModal.jsx` component matching the requested user-profile modal layout (with avatar badges, stats table, and sleek animations).
+    - Wired click events to player seat cards in both the Waiting Room (`/room/[id]`) and the Game Board (`/game/[id]`) to open the statistics modal for any human player.
+
+--------------------------------------------------------------------------------
+4. OTHER PENDING / MISSING / UNIMPLEMENTED ITEMS
+--------------------------------------------------------------------------------
+
+[ ] ITEM 1: Leaderboard Page
+    - Status: Missing. The folder `frontend/src/app/leaderboard/` is completely empty.
+    - Plan: Build a table UI showing user wins, losses, and win rates by fetching records from Django's backend `/leaderboard` endpoint.
+
+[ ] ITEM 2: User Profile Page
+    - Status: Missing. The folder `frontend/src/app/profile/` is completely empty.
+    - Plan: Create a personal stats page displaying total matches, win/loss history, and linked Google/Facebook OAuth details.
+
+[ ] ITEM 3: Room Clean-up / Bot Handling on Hand Complete Quit
+    - Status: Gap. If a player quits the game during the "Hand Complete" modal screen, the room status changes but there's no logic to auto-substitute them with a bot or shut down the active match cleanly.
+    - Options:
+      A. Instantly replace the quitting player's seat with a permanent bot and let the remaining three players continue.
+      B. Shut down the match, award the remaining team the win, and return players to the lobby.
+
+[ ] ITEM 4: Mid-Game Reconnection Auto-Redirect
+    - Status: Gap. If a player in an active match refreshes their browser or loses connection, returning to the page shows the waiting room `/room/[id]` first. They are not automatically routed back to `/game/[id]` despite the backend supporting the state snapshot.
+    - Plan: Add a redirect check in `frontend/src/app/room/[id]/page.jsx` to check if a match is already `in_progress` and auto-push them to the game board.
+
+[ ] ITEM 5: Smart Bot Heuristics (Card Memory)
+    - Status: Heuristics are basic. The bot in `backend-node/src/game-engine/bot.js` plays cards based only on the current trick.
+    - Plan: Enhance bot decision-making to track cards played in previous tricks (e.g., drawing out trumps, keeping track of high cards already played).
+

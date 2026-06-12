@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSocketStore } from "../../../store/socketStore";
 import { useSocket } from "../../../hooks/useSocket";
+import PlayerStatsModal from "../../../components/ui/PlayerStatsModal";
 
 export default function RoomPage() {
   const { id: roomId } = useParams();
@@ -13,6 +14,7 @@ export default function RoomPage() {
   const [chatInput, setChatInput] = useState("");
   const [joined, setJoined] = useState(false);
   const [countdown, setCountdown] = useState(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
 
   useSocket();
 
@@ -83,7 +85,7 @@ export default function RoomPage() {
         <h2 className="text-slate-300 font-medium mb-4">Players ({filledSeats.filter(Boolean).length}/4)</h2>
         <div className="grid grid-cols-2 gap-3">
           {filledSeats.map((player, idx) => (
-            <SeatCard key={idx} seat={idx} player={player} isYou={player?.userId === session?.userId} />
+            <SeatCard key={idx} seat={idx} player={player} isYou={player?.userId === session?.userId} onAvatarClick={setSelectedPlayerId} />
           ))}
         </div>
       </section>
@@ -122,16 +124,27 @@ export default function RoomPage() {
           </button>
         </form>
       </section>
+
+      {/* Player Stats Popup */}
+      {selectedPlayerId && (
+        <PlayerStatsModal
+          userId={selectedPlayerId}
+          onClose={() => setSelectedPlayerId(null)}
+        />
+      )}
     </main>
   );
 }
 
-function SeatCard({ seat, player, isYou }) {
+function SeatCard({ seat, player, isYou, onAvatarClick }) {
   const teamLabel = seat % 2 === 0 ? "Team A" : "Team B";
   const teamColor = seat % 2 === 0 ? "text-blue-400" : "text-red-400";
 
   return (
-    <div className={`rounded-xl border p-3 flex items-center gap-3 ${player ? "bg-slate-700 border-slate-600" : "bg-slate-900 border-dashed border-slate-700"}`}>
+    <div 
+      onClick={() => player && !player.isBot && onAvatarClick && onAvatarClick(player.userId)}
+      className={`rounded-xl border p-3 flex items-center gap-3 select-none ${player && !player.isBot ? "bg-slate-700 border-slate-600 cursor-pointer hover:bg-slate-600/70 transition" : "bg-slate-900 border-dashed border-slate-700"}`}
+    >
       <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-lg overflow-hidden flex-shrink-0">
         {player?.avatarUrl ? (
           <img src={player.avatarUrl} alt={player.username} className="w-full h-full object-cover" />

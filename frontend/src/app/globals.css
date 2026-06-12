@@ -14,11 +14,26 @@ body {
   font-family: system-ui, sans-serif;
 }
 
-.card-playable,
+/* Force pointer cursor globally */
 button,
-a {
-  cursor: pointer;
+a,
+.card-playable {
+  cursor: pointer !important;
 }
+
+.text-red-400 {
+  background-color: white !important;
+  padding: 5px;
+  color: red;
+  border-radius: 5px;
+}
+
+/* Ensure disabled buttons show the correct cursor */
+button:disabled,
+button[disabled] {
+  cursor: not-allowed !important;
+}
+
 
 /* Card hover lift */
 .card-playable {
