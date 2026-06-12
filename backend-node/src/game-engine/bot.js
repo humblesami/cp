@@ -1,6 +1,5 @@
 const { getLegalCards } = require("./validator");
 const { getSuit, getRankValue, isAce, isTrump } = require("./deck");
-const { getTeam, resolveTrick } = require("./trick");
 
 /**
  * Stateless rule-based bot. Given game state from bot's perspective, returns the card to play.
@@ -10,44 +9,98 @@ function botChooseCard(hand, currentTrick, trump, seatIndex) {
 
   // Leading the trick
   if (!currentTrick || currentTrick.ledBy === null) {
-    return leadCard(legal, trump);
+    return leadCard(legal, hand);
   }
 
   return followCard(legal, currentTrick, trump, seatIndex);
 }
 
-function leadCard(legal, trump) {
-  // Prefer leading a high non-trump card
-  const nonTrump = legal.filter((c) => !isTrump(c, trump));
-  if (nonTrump.length > 0) {
-    return highestCard(nonTrump);
+function leadCard(legal, hand) {
+  // Go for the max (of all) card except ace
+  const nonAces = legal.filter((c) => !isAce(c));
+  const candidates = nonAces.length > 0 ? nonAces : legal;
+
+  // Find max rank value
+  const maxRankVal = Math.max(...candidates.map((c) => getRankValue(c)));
+  const maxRankCards = candidates.filter((c) => getRankValue(c) === maxRankVal);
+
+  if (maxRankCards.length === 1) {
+    return maxRankCards[0];
   }
-  return lowestCard(legal);
+
+  // Count cards of each suit in the hand
+  const suitCounts = {};
+  for (const card of hand) {
+    const suit = getSuit(card);
+    suitCounts[suit] = (suitCounts[suit] || 0) + 1;
+  }
+
+  // If more than one cards have max but equal rank, play the one having more cards of same suit
+  maxRankCards.sort((a, b) => suitCounts[getSuit(b)] - suitCounts[getSuit(a)]);
+
+  return maxRankCards[0];
 }
 
 function followCard(legal, currentTrick, trump, seatIndex) {
   const partnerSeat = (seatIndex + 2) % 4;
   const partnerCard = currentTrick.cards[partnerSeat];
-
-  // Is partner currently winning?
   const partnerIsWinning = partnerCard && isCurrentlyWinning(partnerSeat, currentTrick, trump);
 
+  const ledCard = currentTrick.cards[currentTrick.ledBy];
+  const ledSuit = getSuit(ledCard);
+
+  // 1. Play card of the same suit as the lead player had started with if available
+  const sameSuitCards = legal.filter((c) => getSuit(c) === ledSuit);
+
   if (partnerIsWinning) {
-    // Partner is winning — dump our lowest card
-    return lowestCard(legal);
+    // Rule 2: If partner is senior and has played a card
+    if (sameSuitCards.length > 0) {
+      // play card of same suit (lowest card to conserve high cards)
+      return lowestCard(sameSuitCards);
+    } else {
+      // give a non trump card if same suit card is not available
+      const nonTrumpCards = legal.filter((c) => !isTrump(c, trump));
+      if (nonTrumpCards.length > 0) {
+        return lowestCard(nonTrumpCards);
+      } else {
+        // but if only trump cards available then play min trump
+        return lowestCard(legal);
+      }
+    }
+  } else {
+    // Rule 3: If any of opponents is senior then do exactly opposite
+    const winningSeat = getWinningSeat(currentTrick, trump);
+    const winningCard = currentTrick.cards[winningSeat];
+
+    if (sameSuitCards.length > 0) {
+      // Play card of same suit, but try to win the trick (beat current winning card)
+      const winningCardsOfSameSuit = sameSuitCards.filter((c) => beats(c, winningCard, ledSuit, trump));
+      if (winningCardsOfSameSuit.length > 0) {
+        return lowestCard(winningCardsOfSameSuit); // Lowest winning card
+      } else {
+        return lowestCard(sameSuitCards); // Can't win, play lowest card of same suit
+      }
+    } else {
+      // Give a trump card if same suit card is not available to win the trick
+      const trumps = legal.filter((c) => isTrump(c, trump));
+      if (trumps.length > 0) {
+        const winningTrumps = trumps.filter((c) => beats(c, winningCard, ledSuit, trump));
+        if (winningTrumps.length > 0) {
+          return lowestCard(winningTrumps); // Lowest winning trump
+        } else {
+          return lowestCard(trumps); // Play min trump if can't beat it
+        }
+      } else {
+        // Only non-trump cards available, play lowest non-trump card
+        return lowestCard(legal);
+      }
+    }
   }
-
-  // Try to win the trick
-  const winningCard = findLowestWinningCard(legal, currentTrick, trump);
-  if (winningCard) return winningCard;
-
-  // Can't win — dump lowest
-  return lowestCard(legal);
 }
 
-function isCurrentlyWinning(seat, trick, trump) {
+function getWinningSeat(trick, trump) {
   const playedCards = Object.entries(trick.cards).filter(([, c]) => c !== null);
-  if (playedCards.length === 0) return false;
+  if (playedCards.length === 0) return null;
   const ledSuit = getSuit(trick.cards[trick.ledBy]);
 
   let winningSeat = trick.ledBy;
@@ -57,7 +110,11 @@ function isCurrentlyWinning(seat, trick, trump) {
       winningSeat = parseInt(s);
     }
   }
-  return winningSeat === seat;
+  return winningSeat;
+}
+
+function isCurrentlyWinning(seat, trick, trump) {
+  return getWinningSeat(trick, trump) === seat;
 }
 
 function beats(challenger, currentWinner, ledSuit, trump) {
@@ -67,19 +124,6 @@ function beats(challenger, currentWinner, ledSuit, trump) {
   if (!ct && wt) return false;
   if (getSuit(challenger) !== getSuit(currentWinner)) return false;
   return getRankValue(challenger) > getRankValue(currentWinner);
-}
-
-function findLowestWinningCard(legal, trick, trump) {
-  const ledSuit = getSuit(trick.cards[trick.ledBy]);
-  const candidates = legal
-    .filter((c) => {
-      // Try to beat what's on the table
-      const playedNonNull = Object.values(trick.cards).filter(Boolean);
-      return playedNonNull.every((existing) => beats(c, existing, ledSuit, trump));
-    })
-    .sort((a, b) => getRankValue(a) - getRankValue(b));
-
-  return candidates[0] || null;
 }
 
 function lowestCard(cards) {

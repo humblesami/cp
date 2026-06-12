@@ -52,3 +52,78 @@ COURT PIECE GAME - DIAGNOSTICS & PENDING ITEMS
     - Status: Heuristics are basic. The bot in `backend-node/src/game-engine/bot.js` plays cards based only on the current trick.
     - Plan: Enhance bot decision-making to track cards played in previous tricks (e.g., drawing out trumps, keeping track of high cards already played).
 
+
+
+[x] ITEM 6: Practice Mode (Play Solo with Bots)
+    - Status: Completed.
+    - Implemented a "Play Solo" action in LobbyPage to immediately create a room with 3 bots and launch the game.
+    - Rewrote the bot card-selection engine in `bot.js` to strictly adhere to the requested heuristics.
+    - Added angled, fanned-out layout for player cards at the bottom.
+    - Doubled the visual dimensions of both normal (hand) and small (trick) cards.
+    - Centered a large suit symbol inside the cards (4x size) with a traditional layout.
+    - Implemented a server-side 10-second turn timer for human players that automatically plays a valid card (using bot heuristics) upon expiration.
+    - Integrated a visual countdown on the player's turn indicator.
+  
+
+Website disconnect and connect/rejoin case Handling
+
+
+To handle all scenarios game can have following states, (u are requested to verify/imrprove my suggestion)
+0. 4 players reached room
+1. starting (giving cards for trump selection)
+2. selecting trump
+3. trump selected (dsitrubuting cards)
+4. cards distributed (game is in mid-way)
+5. last 52nd cards played (collecting results)
+6. showing result (asking to continue quit)
+7. game ended
+
+if all players chose continue then new game will be genrated
+
+when user reloads page, he should be disconnected from game, if its a solo game with bots then game should be destroyed, but if its with real players, then a bot wil replace him and play on his behalf
+
+when user disconnects between the game we will store game id in his profile table
+
+when user connects  first will be authenticated and then immediately we will check his profile table
+
+
+IF there is no game id in profile, he will follow normal flow
+otherwise
+app will find the game by id
+if no active (non ended) game is found then he will follow normal flow
+otherwise
+if  active game found and is in last three 5,6,7 states then he will have to wait untile game is ended, a loader should be shown that ur game is ending, when ended he can follow normal flow
+if active games is in state 4 but only 1 card is left to play, then he will be locked same as ur game is ending
+but if there are at lkeast two cards to play in his active game, then currently his substitue's turn then he will again be locked to wait for the turn to be done and then will be taken to room
+but if someone else has turn then he will be taken to game immediately 
+
+
+if user joins the website but is already active other session
+we have to disconnect him from the previous session immediately and treat prev session same like bot
+OR you can see my verified improvements to this flow below:
+
+Verified & Improved Reconnection Flow Specifications:
+--------------------------------------------------------------------------------
+1. Room Cleanup for Solo Games:
+   - If the roomId matches "SOLO-*" and the player disconnects, destroy the game state and the room state immediately in Redis. There is no need to keep bot-only matches running.
+
+2. PostgreSQL Profile Mapping:
+   - Add a column `active_room_id` to the users table.
+   - When a match is started, write the roomId to `active_room_id` for all human players in that room.
+   - When the match ends or the room is closed, clear the column (`SET active_room_id = NULL`).
+
+3. Re-Authentication & Lobby Check:
+   - On connecting to the site, check the database for `active_room_id`.
+   - If present, fetch the game state from Redis:
+     * If the state phase is "match_over" or "finished" (states 6, 7), display a locking overlay ("Your match has ended. Returning to lobby...") and clear the database column, then route to `/lobby`.
+     * If phase is in-progress (state 4) and only 1 card remains in the trick/hand, show the locking overlay ("Trick is finishing...").
+     * If the substitute bot is currently in the middle of executing a card play for them (during the 10s timeout or substitution delay), show a brief loading overlay until the bot completes the action, then render the game board.
+     * Otherwise, route them directly to `/game/[id]` to seamlessly resume play.
+
+4. Concurrent Sessions (Multi-tab):
+   - When a user connects from a new socket, check if there is an existing socket connection for that userId.
+   - If found, emit a "kick_concurrent" event to the old socket, force it to disconnect, and bind the new socket to the room immediately.
+
+5. Solo Play hSet Bug Fix:
+   - Resolved a Redis hSet TypeError where `updateRoomMetadata` was called with an object instead of positional parameters.
+   - Refactored `updateRoomMetadata` to dynamically accept both object-style field updates and standard positional parameters.

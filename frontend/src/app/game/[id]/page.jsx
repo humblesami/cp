@@ -124,7 +124,7 @@ export default function GamePage() {
           <div className="w-full max-w-2xl aspect-square relative flex items-center justify-center">
 
             {/* Felt oval table */}
-            <div className="felt-table rounded-full w-4/5 h-3/5 absolute" />
+            <div className="rounded-[50%] w-[90%] h-[70%] absolute bg-green-800/90 border-[16px] border-amber-900/90 shadow-[inset_0_0_50px_rgba(0,0,0,0.8),0_10px_30px_rgba(0,0,0,0.5)]" />
 
             {/* TOP player */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2">
@@ -166,7 +166,7 @@ export default function GamePage() {
             </div>
 
             {/* Center trick area — shows all 4 played cards */}
-            <div className="relative z-10 grid grid-cols-2 gap-2 w-28 h-28">
+            <div className="relative z-10 grid grid-cols-2 gap-4 w-48 h-56">
               {[relativeSeats.top, relativeSeats.right, relativeSeats.left, relativeSeats.bottom].map((seatIdx, pos) => (
                 <div key={seatIdx} className={`flex ${pos < 2 ? "items-start" : "items-end"} ${pos % 2 === 0 ? "justify-start" : "justify-end"}`}>
                   <AnimatePresence>
@@ -215,19 +215,37 @@ export default function GamePage() {
       </div>
 
       {/* YOUR HAND — fixed at bottom */}
-      <div className="bg-slate-950/80 border-t border-slate-800 px-4 py-3">
-        <div className="flex items-center justify-center gap-2 flex-wrap">
+      <div className="bg-slate-950/90 border-t border-slate-800 px-4 py-8 pb-12 overflow-visible relative z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="flex items-end justify-center h-48 relative perspective-1000">
           {yourHand?.length > 0 ? (
-            yourHand.map((card) => (
-              <PlayingCard
-                key={card}
-                card={card}
-                playable={isYourTurn && gamePhase === "playing"}
-                onClick={() => handlePlayCard(card)}
-              />
-            ))
+            yourHand.map((card, idx) => {
+              const n = yourHand.length;
+              const centerIndex = (n - 1) / 2;
+              const angle = (idx - centerIndex) * 4.5;
+              const yOffset = Math.pow(Math.abs(idx - centerIndex), 2) * 1.5;
+
+              return (
+                <div
+                  key={card}
+                  style={{
+                    transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
+                    transformOrigin: "bottom center",
+                    zIndex: idx,
+                    marginLeft: idx === 0 ? 0 : "-70px",
+                  }}
+                  className="relative transition-all duration-300 hover:-translate-y-6 hover:z-50"
+                >
+                  <PlayingCard
+                    card={card}
+                    playable={isYourTurn && gamePhase === "playing"}
+                    onClick={() => handlePlayCard(card)}
+                    className="shadow-2xl shadow-black/50"
+                  />
+                </div>
+              );
+            })
           ) : (
-            <p className="text-slate-600 text-sm py-4">
+            <p className="text-slate-600 text-sm py-4 self-center">
               {gamePhase === "trump_selection" ? "Waiting for trump declaration…" : "Waiting for game to start…"}
             </p>
           )}

@@ -8,10 +8,11 @@ function socketAuthMiddleware(socket, next) {
   if (!token) return next(new Error("AUTH_REQUIRED"));
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-jwt-secret");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-jwt-secret-change-in-production");
     socket.user = {
       id: decoded.user_id,           // Django JWT uses user_id
       username: decoded.username,
+      role: decoded.role || "user",
     };
     next();
   } catch (err) {

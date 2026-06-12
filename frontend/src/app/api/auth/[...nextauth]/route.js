@@ -43,12 +43,12 @@ export const authOptions = {
           INSERT INTO users_user (
             username, email, password, first_name, last_name, 
             is_superuser, is_staff, is_active, date_joined, 
-            avatar_url, total_matches, wins, losses
+            avatar_url, total_matches, wins, losses, role
           )
-          VALUES ($1, $2, '', $3, $4, false, false, true, NOW(), $5, 0, 0, 0)
+          VALUES ($1, $2, '', $3, $4, false, false, true, NOW(), $5, 0, 0, 0, 'user')
           ON CONFLICT (username) 
           DO UPDATE SET avatar_url = EXCLUDED.avatar_url, email = EXCLUDED.email
-          RETURNING id;
+          RETURNING id, role;
         `;
 
         const res = await query(sql, [
@@ -60,8 +60,9 @@ export const authOptions = {
         ]);
 
         if (res.rows.length > 0) {
-          // Attach the database ID to the user object for the jwt callback
+          // Attach the database ID and role to the user object for the jwt callback
           user.id = res.rows[0].id;
+          user.role = res.rows[0].role || "user";
           return true;
         }
         return false;
@@ -75,11 +76,12 @@ export const authOptions = {
       if (user) {
         token.userId = user.id;
         token.provider = account.provider;
+        token.role = user.role;
 
         token.djangoAccess = jwt.sign(
-          { user_id: user.id, username: token.name }, // Changed to user_id
+          { user_id: user.id, username: token.name, role: user.role || "user" },
           process.env.JWT_SECRET || "dev-jwt-secret-change-in-production",
-          { expiresIn: "30d" } // Matches your "stay logged in" requirement
+          { expiresIn: "30d" }
         );
       }
       return token;
@@ -88,6 +90,7 @@ export const authOptions = {
     async session({ session, token }) {
       session.djangoAccess = token.djangoAccess;
       session.userId = token.userId;
+      session.role = token.role || "user";
       return session;
     },
   },

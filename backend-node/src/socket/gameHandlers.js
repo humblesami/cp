@@ -4,6 +4,8 @@ const { declareTrump, playCard, startNewHand, getPlayerView } = require("../game
 const { botChooseCard, botChooseTrump } = require("../game-engine/bot");
 const axios = require("axios");
 
+const turnTimers = new Map();
+
 function registerGameHandlers(io, socket) {
   const { user } = socket;
 
@@ -21,6 +23,8 @@ function registerGameHandlers(io, socket) {
 
       io.to(roomId).emit("trump_declared", { trump, callerSeat: seatIndex, callerUsername: user.username });
       await broadcastPlayerViews(io, roomId, newState);
+
+      scheduleTurnTimer(io, roomId, newState);
 
       callback?.({ ok: true });
     } catch (err) {
@@ -57,6 +61,11 @@ function registerGameHandlers(io, socket) {
 
     await broadcastPlayerViews(io, roomId, newState);
     io.to(roomId).emit("new_hand_started", { dealerSeat: newState.dealerSeat, trumpCallerSeat: newState.trumpCallerSeat });
+
+    if (newState.seats[newState.trumpCallerSeat]?.isBot) {
+      setTimeout(() => triggerBotTrump(io, roomId, newState, newState.trumpCallerSeat), 1200);
+    }
+
     callback?.({ ok: true });
   });
 
@@ -78,6 +87,12 @@ function registerGameHandlers(io, socket) {
  * Core card-play processor. Used by both human plays and bot plays.
  */
 async function processCardPlay(io, roomId, state, seatIndex, card) {
+  const existingTimer = turnTimers.get(roomId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    turnTimers.delete(roomId);
+  }
+
   const { newState, trickComplete, trickWinner, coatDetected, handComplete, handResult } = playCard(state, seatIndex, card);
 
   await saveGameState(roomId, newState);
@@ -116,6 +131,8 @@ async function processCardPlay(io, roomId, state, seatIndex, card) {
     const nextSeat = newState.turn;
     if (newState.seats[nextSeat]?.isBot) {
       setTimeout(() => triggerBotPlay(io, roomId, newState, nextSeat), 1200);
+    } else {
+      scheduleTurnTimer(io, roomId, newState);
     }
   }
 }
@@ -162,6 +179,44 @@ async function triggerBotTrump(io, roomId, state, botSeat) {
   // After declaring trump, the bot also leads the first trick!
   if (newState.turn === botSeat) {
     setTimeout(() => triggerBotPlay(io, roomId, newState, botSeat), 1200);
+  } else {
+    scheduleTurnTimer(io, roomId, newState);
+  }
+}
+
+function scheduleTurnTimer(io, roomId, state) {
+  const existingTimer = turnTimers.get(roomId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    turnTimers.delete(roomId);
+  }
+
+  if (state.phase !== "playing" || state.turn === null) return;
+
+  const nextSeat = state.turn;
+  const isBot = state.seats[nextSeat]?.isBot;
+
+  if (!isBot) {
+    const timer = setTimeout(async () => {
+      try {
+        const freshState = await getGameState(roomId);
+        if (!freshState || freshState.turn !== nextSeat || freshState.phase !== "playing") return;
+
+        const card = botChooseCard(
+          freshState.hands[nextSeat],
+          freshState.currentTrick,
+          freshState.trump,
+          nextSeat
+        );
+
+        console.log(`[Timer] Auto-playing card ${card} for player ${freshState.seats[nextSeat]?.username} due to timeout.`);
+        await processCardPlay(io, roomId, freshState, nextSeat, card);
+      } catch (err) {
+        console.error("[Timer] Auto-play timeout handler error:", err);
+      }
+    }, 10000);
+
+    turnTimers.set(roomId, timer);
   }
 }
 

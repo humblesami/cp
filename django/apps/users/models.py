@@ -7,6 +7,7 @@ class User(AbstractUser):
     total_matches = models.PositiveIntegerField(default=0)
     wins = models.PositiveIntegerField(default=0)
     losses = models.PositiveIntegerField(default=0)
+    role = models.CharField(max_length=50, default="user")
 
     def __str__(self):
         return self.username

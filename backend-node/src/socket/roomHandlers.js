@@ -1,4 +1,17 @@
-const { createRoom, getRoom, joinRoom, leaveRoom, markDisconnected, markReconnected, findActiveRoomByUserId } = require("../redis/rooms");
+const { 
+  createRoom, 
+  getRoom, 
+  joinRoom, 
+  leaveRoom, 
+  markDisconnected, 
+  markReconnected, 
+  findActiveRoomByUserId,
+  findAdminRoomsByUserId,
+  transferAdmin,
+  updateRoomMetadata,
+  deleteRoom,
+  createSoloRoom
+} = require("../redis/rooms");
 const { getGameState } = require("../redis/gameState");
 const { createGameState, getPlayerView } = require("../game-engine/engine");
 const { saveGameState } = require("../redis/gameState");
@@ -42,10 +55,20 @@ function registerRoomHandlers(io, socket) {
   });
 
   // ── Create Room ────────────────────────────────────────
-  socket.on("create_room", async ({ name, isPrivate = false }, callback) => {
+  socket.on("create_room", async ({ name, description = "", isPrivate = false }, callback) => {
     try {
+      // Check if user is already admin of an active room
+      const adminRooms = await findAdminRoomsByUserId(user.id);
+      if (adminRooms.length > 0) {
+        return callback({ 
+          ok: false, 
+          error: "You cannot create a new room until you transfer admin status or leave your active room." 
+        });
+      }
+
       const roomId = await createRoom({
         name: name || `${user.username}'s Table`,
+        description,
         createdByUserId: user.id,
         createdByUsername: user.username,
         isPrivate,
@@ -58,6 +81,42 @@ function registerRoomHandlers(io, socket) {
       callback({ ok: true, roomId, room });
     } catch (err) {
       callback({ ok: false, error: err.message });
+    }
+  });
+
+  // ── Create Solo Room (All Bots) ─────────────────────────
+  socket.on("create_solo_room", async (_, callback) => {
+    try {
+      const adminRooms = await findAdminRoomsByUserId(user.id);
+      if (adminRooms.length > 0) {
+        return callback({ 
+          ok: false, 
+          error: "You cannot start a solo game until you transfer admin status or leave your active room." 
+        });
+      }
+
+      const roomId = await createSoloRoom(user.id, user.username);
+      await updateRoomMetadata(roomId, { status: "in_progress" });
+
+      socket.join(roomId);
+      socket.currentRoomId = roomId;
+
+      const room = await getRoom(roomId);
+      callback?.({ ok: true, roomId, room });
+
+      // Automatically trigger game start since solo room has all 4 players (1 human + 3 bots) immediately!
+      // dealerSeat = 3 means trumpCaller is (3+1)%4 = 0, which is the human player.
+      setTimeout(async () => {
+        try {
+          await startGame(io, roomId, room, 3);
+        } catch (err) {
+          console.error("Failed to auto-start solo game:", err);
+        }
+      }, 500);
+
+    } catch (err) {
+      console.error("Solo room error:", err);
+      callback?.({ ok: false, error: err.message });
     }
   });
 
@@ -105,6 +164,7 @@ function registerRoomHandlers(io, socket) {
 
       // Auto-start when 4 players seated
       if (playerCount === 4 && status !== "in_progress") {
+        await updateRoomMetadata(roomId, { status: "in_progress" });
         setTimeout(() => startGame(io, roomId, room), 3000);
         io.to(roomId).emit("game_starting", { countdown: 3 });
       }
@@ -117,13 +177,110 @@ function registerRoomHandlers(io, socket) {
 
   // ── Leave Room ─────────────────────────────────────────
   socket.on("leave_room", async (_, callback) => {
-    await handleLeave(io, socket, "voluntary");
-    callback?.({ ok: true });
+    try {
+      await handleLeave(io, socket, "voluntary");
+      callback?.({ ok: true });
+    } catch (err) {
+      console.error("Leave room error:", err);
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  // ── Rename Room & Update Description ───────────────────
+  socket.on("update_room", async ({ name, description }, callback) => {
+    try {
+      if (!socket.currentRoomId) throw new Error("NOT_IN_ROOM");
+      const room = await getRoom(socket.currentRoomId);
+      if (!room) throw new Error("ROOM_NOT_FOUND");
+
+      if (parseInt(room.createdBy) !== parseInt(user.id)) {
+        throw new Error("UNAUTHORIZED");
+      }
+
+      await updateRoomMetadata(socket.currentRoomId, name, description);
+      const updatedRoom = await getRoom(socket.currentRoomId);
+      io.to(socket.currentRoomId).emit("room_updated", { room: updatedRoom });
+      callback?.({ ok: true });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  // ── Transfer Admin ─────────────────────────────────────
+  socket.on("transfer_admin", async ({ targetUserId }, callback) => {
+    try {
+      if (!socket.currentRoomId) throw new Error("NOT_IN_ROOM");
+      const room = await getRoom(socket.currentRoomId);
+      if (!room) throw new Error("ROOM_NOT_FOUND");
+
+      if (parseInt(room.createdBy) !== parseInt(user.id)) {
+        throw new Error("UNAUTHORIZED");
+      }
+
+      const seats = Object.values(room.seats);
+      const targetInRoom = seats.find((s) => s && parseInt(s.userId) === parseInt(targetUserId));
+      if (!targetInRoom) throw new Error("TARGET_PLAYER_NOT_IN_ROOM");
+
+      await transferAdmin(socket.currentRoomId, targetUserId);
+      const updatedRoom = await getRoom(socket.currentRoomId);
+
+      io.to(socket.currentRoomId).emit("room_updated", { room: updatedRoom });
+      io.to(socket.currentRoomId).emit("chat_message", {
+        userId: "system",
+        username: "System",
+        message: `${targetInRoom.username} is now the table admin.`,
+        timestamp: Date.now(),
+      });
+      callback?.({ ok: true });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  // ── Kick Player ────────────────────────────────────────
+  socket.on("kick_player", async ({ targetUserId }, callback) => {
+    try {
+      if (!socket.currentRoomId) throw new Error("NOT_IN_ROOM");
+      const roomId = socket.currentRoomId;
+      const room = await getRoom(roomId);
+      if (!room) throw new Error("ROOM_NOT_FOUND");
+
+      if (parseInt(room.createdBy) !== parseInt(user.id)) {
+        throw new Error("UNAUTHORIZED");
+      }
+
+      const seats = Object.values(room.seats);
+      const targetInRoom = seats.find((s) => s && parseInt(s.userId) === parseInt(targetUserId));
+      if (!targetInRoom) throw new Error("TARGET_PLAYER_NOT_IN_ROOM");
+
+      await leaveRoom(roomId, targetUserId, true);
+
+      const sockets = await io.in(roomId).fetchSockets();
+      const targetSocket = sockets.find((s) => s.user?.id === targetUserId);
+      if (targetSocket) {
+        targetSocket.leave(roomId);
+        targetSocket.currentRoomId = null;
+        targetSocket.emit("kicked", { reason: "You were kicked by the table admin." });
+      }
+
+      io.to(roomId).emit("player_left", { userId: targetUserId, username: targetInRoom.username, reason: "kicked" });
+      const updatedRoom = await getRoom(roomId);
+      io.to(roomId).emit("player_joined", { room: updatedRoom, newPlayer: null });
+
+      callback?.({ ok: true });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
   });
 
   // ── Chat ───────────────────────────────────────────────
-  socket.on("send_chat", ({ message }) => {
+  socket.on("send_chat", async ({ message }) => {
     if (!socket.currentRoomId || !message?.trim()) return;
+    const room = await getRoom(socket.currentRoomId);
+    if (!room) return;
+    const seatsCount = Object.values(room.seats).filter(Boolean).length;
+    if (seatsCount < 2) return;
+
     io.to(socket.currentRoomId).emit("chat_message", {
       userId: user.id,
       username: user.username,
@@ -132,45 +289,85 @@ function registerRoomHandlers(io, socket) {
     });
   });
 
+  // ── Lobby Chat ─────────────────────────────────────────
+  socket.on("join_lobby", () => {
+    socket.join("lobby");
+  });
+
+  socket.on("send_lobby_chat", ({ message }) => {
+    if (!message?.trim()) return;
+    io.to("lobby").emit("lobby_message", {
+      userId: user.id,
+      username: user.username,
+      message: message.trim().slice(0, 200),
+      role: user.role,
+      timestamp: Date.now(),
+    });
+  });
+
   // ── Disconnect handling ────────────────────────────────
   socket.on("disconnect", async () => {
-    if (!socket.currentRoomId) return;
-    const roomId = socket.currentRoomId;
+    socket.leave("lobby");
 
-    await markDisconnected(roomId, user.id);
-    io.to(roomId).emit("player_disconnected", { userId: user.id, username: user.username, reconnectWindowMs: BOT_SUBSTITUTION_DELAY_MS });
-
-    // Start bot substitution timer
-    const timerKey = `${roomId}:${user.id}`;
-    const timer = setTimeout(async () => {
-      disconnectTimers.delete(timerKey);
-      const gameState = await getGameState(roomId);
-      if (!gameState) return;
-
-      // Mark their seat as bot
-      const seat = gameState.seats.findIndex((s) => s && s.userId === user.id);
-      if (seat >= 0) {
-        gameState.seats[seat].isBot = true;
-        await saveGameState(roomId, gameState);
-        io.to(roomId).emit("bot_substituted", { seat, username: user.username });
-
-        // Trigger bot action if it was this player's turn
-        const { triggerBotPlay, triggerBotTrump } = require("./gameHandlers");
-        if (gameState.phase === "trump_selection" && gameState.trumpCallerSeat === seat) {
-          setTimeout(() => triggerBotTrump(io, roomId, gameState, seat), 1200);
-        } else if (gameState.phase === "playing" && gameState.turn === seat) {
-          setTimeout(() => triggerBotPlay(io, roomId, gameState, seat), 1200);
-        }
+    if (socket.currentRoomId) {
+      const roomId = socket.currentRoomId;
+      
+      if (roomId.startsWith("SOLO-")) {
+        const { deleteGameState } = require("../redis/gameState");
+        const { deleteRoom } = require("../redis/rooms");
+        await deleteGameState(roomId);
+        await deleteRoom(roomId);
+        console.log(`[Disconnect] Instantly cleaned up solo room and game ${roomId}`);
+        return;
       }
-    }, BOT_SUBSTITUTION_DELAY_MS);
 
-    disconnectTimers.set(timerKey, timer);
+      await markDisconnected(roomId, user.id);
+      io.to(roomId).emit("player_disconnected", { userId: user.id, username: user.username, reconnectWindowMs: BOT_SUBSTITUTION_DELAY_MS });
+
+      // Start bot substitution timer
+      const timerKey = `${roomId}:${user.id}`;
+      const timer = setTimeout(async () => {
+        disconnectTimers.delete(timerKey);
+        const gameState = await getGameState(roomId);
+        if (!gameState) return;
+
+        // Mark their seat as bot
+        const seat = gameState.seats.findIndex((s) => s && s.userId === user.id);
+        if (seat >= 0) {
+          gameState.seats[seat].isBot = true;
+          await saveGameState(roomId, gameState);
+          io.to(roomId).emit("bot_substituted", { seat, username: user.username });
+
+          // Trigger bot action if it was this player's turn
+          const { triggerBotPlay, triggerBotTrump } = require("./gameHandlers");
+          if (gameState.phase === "trump_selection" && gameState.trumpCallerSeat === seat) {
+            setTimeout(() => triggerBotTrump(io, roomId, gameState, seat), 1200);
+          } else if (gameState.phase === "playing" && gameState.turn === seat) {
+            setTimeout(() => triggerBotPlay(io, roomId, gameState, seat), 1200);
+          }
+        }
+      }, BOT_SUBSTITUTION_DELAY_MS);
+
+      disconnectTimers.set(timerKey, timer);
+    }
+
+    // Admin clean-up when disconnected from website
+    const adminRooms = await findAdminRoomsByUserId(user.id);
+    for (const r of adminRooms) {
+      const seats = Object.values(r.seats);
+      const playerCount = seats.filter(Boolean).length;
+      if (playerCount === 0) {
+        await deleteRoom(r.id);
+        io.to(r.id).emit("room_closed", { reason: "admin_disconnected" });
+      }
+    }
   });
 }
 
-async function startGame(io, roomId, room) {
+async function startGame(io, roomId, room, dealerSeat = 0) {
+  await updateRoomMetadata(roomId, { status: "in_progress" });
   const seats = Object.values(room.seats);
-  const gameState = createGameState(seats);
+  const gameState = createGameState(seats, dealerSeat);
   await saveGameState(roomId, gameState);
 
   // Send each player their own view (never leaking other hands)
@@ -193,7 +390,15 @@ async function handleLeave(io, socket, reason) {
   const roomId = socket.currentRoomId;
   if (!roomId) return;
 
-  const result = await leaveRoom(roomId, socket.user.id);
+  const room = await getRoom(roomId);
+  if (!room) return;
+
+  // Check if admin is connected to the website
+  const sockets = await io.fetchSockets();
+  const isAdminConnected = sockets.some((s) => s.user?.id === parseInt(room.createdBy));
+
+  // Leave room in Redis
+  const result = await leaveRoom(roomId, socket.user.id, isAdminConnected);
   socket.leave(roomId);
   socket.currentRoomId = null;
 

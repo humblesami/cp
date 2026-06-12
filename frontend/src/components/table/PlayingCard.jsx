@@ -13,9 +13,9 @@ export default function PlayingCard({ card, faceDown = false, playable = false, 
   const suitColor = suit ? SUIT_COLORS[suit] : "";
 
   const base = clsx(
-    "rounded-lg border select-none flex-shrink-0",
-    small ? "w-10 h-14 text-xs" : "w-16 h-24 text-sm",
-    playable && "card-playable ring-2 ring-yellow-400",
+    "rounded-xl border select-none flex-shrink-0 relative transition-shadow duration-300",
+    small ? "w-20 h-28 text-sm" : "w-32 h-48 text-lg",
+    playable && "card-playable ring-4 ring-yellow-400/80 shadow-[0_0_15px_rgba(250,204,21,0.5)]",
     !playable && !faceDown && "opacity-90",
     className
   );
@@ -24,9 +24,9 @@ export default function PlayingCard({ card, faceDown = false, playable = false, 
     return (
       <motion.div
         layout
-        className={clsx(base, "bg-blue-800 border-blue-600 flex items-center justify-center")}
+        className={clsx(base, "bg-gradient-to-br from-blue-800 to-indigo-900 border-blue-600 flex items-center justify-center shadow-lg")}
       >
-        <span className="text-blue-400 text-lg">🂠</span>
+        <span className="text-blue-300 text-4xl">🂠</span>
       </motion.div>
     );
   }
@@ -34,28 +34,34 @@ export default function PlayingCard({ card, faceDown = false, playable = false, 
   if (!card) {
     // Empty slot placeholder
     return (
-      <div className={clsx(base, "bg-transparent border-dashed border-slate-600 opacity-30")} />
+      <div className={clsx(base, "bg-transparent border-2 border-dashed border-slate-700 opacity-20")} />
     );
   }
 
   return (
     <motion.div
       layout
-      whileHover={playable ? { y: -10 } : {}}
+      whileHover={playable ? { y: -15, scale: 1.05 } : {}}
       whileTap={playable ? { scale: 0.95 } : {}}
       onClick={playable ? onClick : undefined}
-      className={clsx(base, "bg-white border-gray-200 cursor-pointer flex flex-col justify-between p-1")}
+      className={clsx(base, "bg-white border-slate-200 cursor-pointer shadow-md hover:shadow-xl relative")}
     >
-      <div className={clsx("font-bold leading-none", suitColor, small ? "text-xs" : "text-sm")}>
-        <div>{rank}</div>
-        <div>{suitSymbol}</div>
+      {/* Top Left Corner - Rank (doubled size) */}
+      <div className={clsx("absolute left-2.5 top-2.5 font-black leading-none", suitColor)}>
+        <span className={clsx(small ? "text-2xl" : "text-4xl")}>{rank}</span>
       </div>
-      {!small && (
-        <div className={clsx("font-bold leading-none rotate-180", suitColor, "text-sm self-end")}>
-          <div>{rank}</div>
-          <div>{suitSymbol}</div>
-        </div>
-      )}
+
+      {/* Left Center - Suit Symbol */}
+      <div className={clsx("absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none select-none", suitColor)}>
+        <span className={clsx("font-black", small ? "text-3xl" : "text-5xl")}>
+          {suitSymbol}
+        </span>
+      </div>
+
+      {/* Bottom Right Corner - Symmetrical Rank */}
+      <div className={clsx("absolute right-2.5 bottom-2.5 font-black leading-none rotate-180", suitColor)}>
+        <span className={clsx(small ? "text-2xl" : "text-4xl")}>{rank}</span>
+      </div>
     </motion.div>
   );
 }

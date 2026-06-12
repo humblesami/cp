@@ -10,6 +10,13 @@ export const useSocketStore = create((set, get) => ({
   // Room state
   currentRoomId: null,
   roomPlayers: [],
+  roomName: "",
+  roomDescription: "",
+  roomAdminId: null,
+  roomIsPrivate: false,
+
+  // Lobby state
+  lobbyMessages: [],
 
   // Game state (player's own view)
   gamePhase: null,       // trump_selection | playing | hand_complete | match_over
@@ -40,21 +47,48 @@ export const useSocketStore = create((set, get) => ({
       transports: ["websocket"],
     });
 
-    socket.on("connect", () => set({ connected: true }));
-    socket.on("disconnect", () => set({ connected: false }));
+    socket.on("connect", () => {
+      console.log("Socket connected successfully to:", SOCKET_URL);
+      set({ connected: true });
+    });
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected from:", SOCKET_URL);
+      set({ connected: false });
+    });
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message, err);
+      set({ connected: false });
+    });
 
     // Room events
     socket.on("player_joined", ({ room, newPlayer }) => {
       const seats = Object.values(room.seats);
-      set({ roomPlayers: seats });
+      set({ 
+        roomPlayers: seats,
+        roomName: room.name,
+        roomDescription: room.description || "",
+        roomAdminId: room.createdBy,
+        roomIsPrivate: room.isPrivate,
+      });
     });
 
-    socket.on("player_left", ({ userId, username }) => {
+    socket.on("room_updated", ({ room }) => {
+      const seats = Object.values(room.seats);
+      set({ 
+        roomPlayers: seats,
+        roomName: room.name,
+        roomDescription: room.description || "",
+        roomAdminId: room.createdBy,
+        roomIsPrivate: room.isPrivate,
+      });
+    });
+
+    socket.on("player_left", ({ userId, username, reason }) => {
       set((s) => ({
         roomPlayers: s.roomPlayers.map((p) =>
           p?.userId === userId ? null : p
         ),
-        notification: `${username} left the room`,
+        notification: reason === "kicked" ? `${username} was kicked from the table` : `${username} left the room`,
       }));
     });
 
@@ -72,6 +106,32 @@ export const useSocketStore = create((set, get) => ({
 
     socket.on("chat_message", (msg) => {
       set((s) => ({ chatMessages: [...s.chatMessages.slice(-99), msg] }));
+    });
+
+    socket.on("room_closed", ({ reason }) => {
+      set({
+        currentRoomId: null,
+        roomPlayers: [],
+        roomName: "",
+        roomDescription: "",
+        roomAdminId: null,
+        notification: reason === "admin_disconnected" ? "Table closed: Admin disconnected." : "Table closed.",
+      });
+    });
+
+    socket.on("kicked", ({ reason }) => {
+      set({
+        currentRoomId: null,
+        roomPlayers: [],
+        roomName: "",
+        roomDescription: "",
+        roomAdminId: null,
+        notification: reason || "You were kicked from the table.",
+      });
+    });
+
+    socket.on("lobby_message", (msg) => {
+      set((s) => ({ lobbyMessages: [...s.lobbyMessages.slice(-99), msg] }));
     });
 
     // Game events
@@ -115,12 +175,25 @@ export const useSocketStore = create((set, get) => ({
 
   disconnect() {
     get().socket?.disconnect();
-    set({ socket: null, connected: false });
+    set({ 
+      socket: null, 
+      connected: false,
+      currentRoomId: null,
+      roomPlayers: [],
+      roomName: "",
+      roomDescription: "",
+      roomAdminId: null,
+      lobbyMessages: [],
+    });
   },
 
   // ── Actions (emit helpers) ──────────────────────────────
-  createRoom(name, isPrivate = false) {
-    return emitWithAck(get().socket, "create_room", { name, isPrivate });
+  createRoom(name, description = "", isPrivate = false) {
+    return emitWithAck(get().socket, "create_room", { name, description, isPrivate });
+  },
+
+  createSoloRoom() {
+    return emitWithAck(get().socket, "create_solo_room", {});
   },
 
   joinRoom(roomId) {
@@ -129,6 +202,26 @@ export const useSocketStore = create((set, get) => ({
 
   leaveRoom() {
     return emitWithAck(get().socket, "leave_room", {});
+  },
+
+  updateRoom(name, description) {
+    return emitWithAck(get().socket, "update_room", { name, description });
+  },
+
+  transferAdmin(targetUserId) {
+    return emitWithAck(get().socket, "transfer_admin", { targetUserId });
+  },
+
+  kickPlayer(targetUserId) {
+    return emitWithAck(get().socket, "kick_player", { targetUserId });
+  },
+
+  joinLobby() {
+    get().socket?.emit("join_lobby");
+  },
+
+  sendLobbyChat(message) {
+    get().socket?.emit("send_lobby_chat", { message });
   },
 
   declareTrump(trump) {

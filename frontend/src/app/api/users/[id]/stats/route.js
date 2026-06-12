@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { query } from "../../../../lib/pg_db";
+import { query } from "../../../../../lib/pg_db";
 
 export async function GET(req, { params }) {
   try {
