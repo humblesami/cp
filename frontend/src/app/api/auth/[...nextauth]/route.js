@@ -1,12 +1,9 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
+import jwt from "jsonwebtoken";
+import { query } from "../../../../lib/pg_db";
 
-/**
- * NextAuth handles the OAuth dance with Google/Facebook.
- * On successful login, it exchanges the social token with Django to get a JWT,
- * then stores that JWT in the Next-Auth session.
- */
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -21,29 +18,53 @@ export const authOptions = {
 
   callbacks: {
     async signIn({ user, account }) {
-      // Exchange OAuth token with Django — Django runs the social auth pipeline
-      // and returns our JWT
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/social/complete/${account.provider}/?code=${account.access_token}`,
-          { method: "GET" }
-        );
-        // In practice you'd call Django's /api/auth/social/ endpoint directly.
-        // This is the integration point — wire to your Django social auth.
-        return true;
-      } catch {
+        const username = user.email.split("@")[0]; // Use prefix of email as username
+        const avatarUrl = user.image || "";
+
+        // Insert or update player in Django's users_user table
+        const sql = `
+          INSERT INTO users_user (
+            username, email, password, first_name, last_name, 
+            is_superuser, is_staff, is_active, date_joined, 
+            avatar_url, total_matches, wins, losses
+          )
+          VALUES ($1, $2, '', $3, $4, false, false, true, NOW(), $5, 0, 0, 0)
+          ON CONFLICT (username) 
+          DO UPDATE SET avatar_url = EXCLUDED.avatar_url
+          RETURNING id;
+        `;
+
+        const res = await query(sql, [
+          username,
+          user.email,
+          user.name.split(" ")[0] || "",
+          user.name.split(" ").slice(1).join(" ") || "",
+          avatarUrl,
+        ]);
+
+        if (res.rows.length > 0) {
+          // Attach the database ID to the user object for the jwt callback
+          user.id = res.rows[0].id;
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error("Error signing in user to Postgres:", err);
         return false;
       }
     },
 
     async jwt({ token, account, user }) {
-      // On first sign-in, fetch Django JWT and store it
-      if (account) {
-        // TODO: Exchange with Django and get { access, refresh, user }
-        // token.djangoAccess = djangoResponse.access;
-        // token.djangoRefresh = djangoResponse.refresh;
-        // token.userId = djangoResponse.user.id;
+      if (user) {
+        token.userId = user.id;
         token.provider = account.provider;
+
+        token.djangoAccess = jwt.sign(
+          { user_id: user.id, username: token.name }, // Changed to user_id
+          process.env.JWT_SECRET || "dev-jwt-secret-change-in-production",
+          { expiresIn: "30d" } // Matches your "stay logged in" requirement
+        );
       }
       return token;
     },
@@ -56,10 +77,9 @@ export const authOptions = {
   },
 
   pages: {
-    signIn: "/",          // redirect to home for login
+    signIn: "/",
     error: "/auth/error",
   },
-
   secret: process.env.NEXTAUTH_SECRET,
 };
 
