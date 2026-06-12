@@ -116,9 +116,7 @@ function playCard(state, seatIndex, card) {
   const newState = {
     ...state,
     hands: newHands,
-    currentTrick: handComplete
-      ? { ledBy: null, cards: { 0: null, 1: null, 2: null, 3: null } }
-      : { ledBy: trickWinner, cards: { 0: null, 1: null, 2: null, 3: null } },
+    currentTrick: { ledBy: null, cards: { 0: null, 1: null, 2: null, 3: null } },
     trickWinners: newTrickWinners,
     completedTricks: [...(state.completedTricks || []), completedTrick],
     turn: nextTurn,

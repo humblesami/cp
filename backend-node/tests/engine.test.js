@@ -123,3 +123,65 @@ describe("deal", () => {
     expect(new Set(all).size).toBe(52);
   });
 });
+
+// ── Game Loop Simulation ──────────────────────────────────────────────────────
+
+describe("Game Loop Simulation", () => {
+  test("full trick completion resets currentTrick ledBy to null", () => {
+    const seats = [
+      { userId: 1, username: "P1", isBot: false },
+      { userId: 2, username: "P2", isBot: true },
+      { userId: 3, username: "P3", isBot: true },
+      { userId: 4, username: "P4", isBot: true },
+    ];
+    let state = createGameState(seats, 0); // Dealer is 0, caller is 1
+
+    // Force trump selection phase to playing
+    state = declareTrump(state, 1, "S");
+    expect(state.phase).toBe("playing");
+    expect(state.turn).toBe(1);
+
+    // Mock hands to ensure controlled play
+    state.hands = [
+      ["AS", "KS"], // Seat 0
+      ["QS", "JS"], // Seat 1
+      ["TS", "9S"], // Seat 2
+      ["8S", "7S"], // Seat 3
+    ];
+
+    // Play Trick 1
+    // Player 1 leads
+    let play1 = playCard(state, 1, "QS");
+    state = play1.newState;
+    expect(state.currentTrick.ledBy).toBe(1);
+
+    // Player 2 follows
+    let play2 = playCard(state, 2, "TS");
+    state = play2.newState;
+
+    // Player 3 follows
+    let play3 = playCard(state, 3, "8S");
+    state = play3.newState;
+
+    // Player 0 follows
+    let play4 = playCard(state, 0, "AS");
+    state = play4.newState;
+
+    // Trick 1 should be complete
+    expect(play4.trickComplete).toBe(true);
+    expect(play4.trickWinner).toBe(0); // Player 0 wins with AS
+
+    // Current trick should reset ledBy to null
+    expect(state.currentTrick.ledBy).toBeNull();
+    expect(state.turn).toBe(0); // Winner leads next trick
+
+    // Now let's try getting legal cards for Player 0 (leading next trick)
+    const legalLead = getLegalCards(state.hands[0], state.currentTrick, state.trump);
+    expect(legalLead).toEqual(["KS"]); // Only KS left
+
+    // Play first card of second trick
+    let play5 = playCard(state, 0, "KS");
+    state = play5.newState;
+    expect(state.currentTrick.ledBy).toBe(0); // Led by Player 0
+  });
+});

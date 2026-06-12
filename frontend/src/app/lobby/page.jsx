@@ -137,46 +137,46 @@ export default function LobbyPage() {
   }
 
   return (
-    <main className="min-h-screen p-6 max-w-6xl mx-auto">
-      <header className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gold">♠ Court Piece</h1>
+    <main className="min-h-screen p-6 max-w-6xl mx-auto text-slate-800">
+      <header className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
+        <h1 className="text-2xl font-black text-emerald-700">♠ Court Piece</h1>
         <div className="flex items-center gap-3">
-          <span className="text-slate-400 text-sm">
-            {connected ? "🟢 Connected" : "🔴 Connecting…"}
+          <span className="text-slate-400 text-xs font-bold">
+            {connected ? "🟢 Connected" : "🔴 Reconnecting…"}
           </span>
-          <span className="text-white font-medium">{session?.user?.name}</span>
+          <span className="text-slate-800 font-bold text-sm">{session?.user?.name}</span>
           {session?.user?.image && (
-            <img src={session.user.image} className="w-9 h-9 rounded-full" alt="avatar" />
+            <img src={session.user.image} className="w-8 h-8 rounded-full border border-slate-200" alt="avatar" />
           )}
         </div>
       </header>
 
       {/* Main Grid: Left Column for room creation/lists, Right Column for Lobby Chat */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side: Create/Join & Room List (span 2) */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Practice Mode / Play Solo */}
-          <section className="bg-gradient-to-r from-amber-600/20 to-gold/10 rounded-xl p-5 border border-amber-500/30 flex items-center justify-between">
+          <section className="bg-gradient-to-r from-emerald-600/10 to-teal-500/5 rounded-xl p-5 border border-emerald-500/20 flex items-center justify-between shadow-sm">
             <div>
-              <h2 className="text-white font-semibold text-lg">Practice Mode</h2>
-              <p className="text-slate-300 text-sm mt-1">Play instantly with 3 intelligent bots. No setup required.</p>
+              <h2 className="text-slate-800 font-bold text-base">Practice Mode</h2>
+              <p className="text-slate-600 text-xs mt-1">Play instantly with 3 intelligent bots. No setup required.</p>
             </div>
             <button
               onClick={handleCreateSoloRoom}
               disabled={loading}
-              className="bg-amber-500 text-slate-900 font-bold px-6 py-2.5 rounded-lg hover:bg-amber-400 disabled:opacity-50 transition shrink-0"
+              className="bg-emerald-600 text-white font-bold px-5 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition shrink-0 text-sm shadow-sm"
             >
               Play Solo
             </button>
           </section>
 
           {/* Create Room */}
-          <section className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-            <h2 className="text-white font-semibold text-lg mb-3">Create a Room</h2>
+          <section className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+            <h2 className="text-slate-800 font-bold text-base mb-3">Create a Room</h2>
             <div className="flex flex-col gap-3 mb-3">
               <div className="flex gap-3">
                 <input
-                  className="flex-1 bg-slate-700 text-white rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-gold placeholder-slate-500"
+                  className="flex-1 bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-400"
                   placeholder="Room name (e.g. Sami's Table)"
                   value={newRoomName}
                   onChange={(e) => setNewRoomName(e.target.value)}
@@ -186,38 +186,38 @@ export default function LobbyPage() {
                 <button
                   onClick={handleCreateRoom}
                   disabled={loading}
-                  className="bg-gold text-slate-900 font-bold px-6 py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 transition"
+                  className="bg-emerald-600 text-white font-bold px-5 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition text-sm shadow-sm"
                 >
                   {loading ? "…" : "Create"}
                 </button>
               </div>
               <textarea
-                className="bg-slate-700 text-white rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-gold placeholder-slate-500 text-sm h-16 resize-none"
+                className="bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-400 text-xs h-16 resize-none"
                 placeholder="Room description / rules (max 255 chars)…"
                 value={newRoomDescription}
                 onChange={(e) => setNewRoomDescription(e.target.value)}
                 maxLength={255}
               />
             </div>
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold">
               <input 
                 type="checkbox" 
                 id="isPrivate" 
                 checked={isPrivate} 
                 onChange={(e) => setIsPrivate(e.target.checked)} 
-                className="w-4 h-4 rounded accent-gold"
+                className="w-4 h-4 rounded border-slate-300 accent-emerald-600"
               />
               <label htmlFor="isPrivate">Private Room (Hide from public list)</label>
             </div>
-            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+            {error && <p className="text-rose-600 text-xs font-bold mt-2">{error}</p>}
           </section>
 
           {/* Join Private Room */}
-          <section className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-            <h2 className="text-white font-semibold text-lg mb-3">Join via Code</h2>
+          <section className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+            <h2 className="text-slate-800 font-bold text-base mb-3">Join via Code</h2>
             <div className="flex gap-3">
               <input
-                className="flex-1 bg-slate-700 text-white rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-gold placeholder-slate-500 uppercase font-mono"
+                className="flex-1 bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-400 uppercase font-mono text-sm tracking-wider"
                 placeholder="Enter Room Code (e.g. ABC12)"
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value)}
@@ -227,7 +227,7 @@ export default function LobbyPage() {
               <button
                 onClick={handleJoinPrivateRoom}
                 disabled={loading || !joinCode.trim()}
-                className="bg-slate-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-slate-500 disabled:opacity-50 transition"
+                className="bg-slate-600 text-white font-bold px-5 py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 transition text-sm shadow-sm"
               >
                 {loading ? "…" : "Join"}
               </button>
@@ -236,11 +236,11 @@ export default function LobbyPage() {
 
           {/* Room List */}
           <section>
-            <h2 className="text-white font-semibold text-lg mb-3">
-              Open Rooms <span className="text-slate-500 font-normal text-sm">({rooms.length})</span>
+            <h2 className="text-slate-800 font-bold text-base mb-3">
+              Open Rooms <span className="text-slate-400 font-normal text-sm">({rooms.length})</span>
             </h2>
             {rooms.length === 0 ? (
-              <p className="text-slate-500 text-center py-12">No rooms yet — be the first to create one.</p>
+              <p className="text-slate-400 text-center py-12 text-sm bg-white rounded-xl border border-slate-200">No rooms yet — be the first to create one.</p>
             ) : (
               <div className="grid gap-3">
                 {rooms.map((room) => (
@@ -252,38 +252,38 @@ export default function LobbyPage() {
         </div>
 
         {/* Right Side: Lobby Chat / Announcements */}
-        <div className="lg:col-span-1 bg-slate-800 rounded-xl border border-slate-700 flex flex-col h-[600px] overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-700 bg-slate-800/50 flex flex-col gap-0.5">
-            <h2 className="text-white font-semibold">Lobby Announcements</h2>
-            <p className="text-xs text-slate-400">Official updates and public lobby chat</p>
+        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 flex flex-col h-[550px] overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex flex-col gap-0.5">
+            <h2 className="text-slate-800 font-bold text-sm">Lobby Announcements</h2>
+            <p className="text-[10px] text-slate-500">Official updates and public lobby chat</p>
           </div>
 
           {/* Message List */}
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
             {lobbyMessages.length === 0 && (
-              <p className="text-slate-500 text-sm text-center mt-12">No messages in lobby yet</p>
+              <p className="text-slate-400 text-xs text-center mt-12">No messages in lobby yet</p>
             )}
             {lobbyMessages.map((msg, idx) => {
               const isMod = msg.role === "moderator";
               return (
                 <div 
                   key={idx} 
-                  className={`p-3 rounded-lg text-sm transition ${
+                  className={`p-3 rounded-lg text-xs transition ${
                     isMod 
-                      ? "bg-amber-500/10 border-l-4 border-amber-500 text-amber-200" 
-                      : "bg-slate-700/50 border border-slate-700/50 text-slate-200"
+                      ? "bg-amber-50 border-l-4 border-amber-500 text-amber-900" 
+                      : "bg-slate-50 border border-slate-100 text-slate-800"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-white">{msg.username}</span>
+                      <span className="font-bold text-slate-800">{msg.username}</span>
                       {isMod && (
-                        <span className="bg-amber-500 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                          Mod Announcement
+                        <span className="bg-amber-500 text-slate-950 text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          Mod
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[9px] text-slate-400">
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -295,9 +295,9 @@ export default function LobbyPage() {
           </div>
 
           {/* Chat Form Input */}
-          <form onSubmit={handleSendLobbyChat} className="flex border-t border-slate-700 bg-slate-900/50">
+          <form onSubmit={handleSendLobbyChat} className="flex border-t border-slate-100 p-2 gap-2 bg-slate-50">
             <input
-              className="flex-1 bg-transparent text-white px-4 py-3 text-sm outline-none placeholder-slate-500"
+              className="flex-1 bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-400"
               placeholder="Type lobby message…"
               value={lobbyChatInput}
               onChange={(e) => setLobbyChatInput(e.target.value)}
@@ -305,7 +305,7 @@ export default function LobbyPage() {
             />
             <button 
               type="submit" 
-              className="px-5 text-gold font-bold text-sm hover:text-yellow-300 disabled:opacity-50 transition border-l border-slate-800"
+              className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 disabled:opacity-50 transition shadow-sm"
               disabled={!lobbyChatInput.trim()}
             >
               Send
@@ -319,32 +319,31 @@ export default function LobbyPage() {
 
 function RoomCard({ room, onJoin, loading }) {
   const statusColor = {
-    waiting: "text-green-400",
-    in_progress: "text-yellow-400",
-    finished: "text-slate-500",
-  }[room.status] || "text-slate-400";
+    waiting: "text-emerald-600",
+    in_progress: "text-amber-600",
+    finished: "text-slate-400",
+  }[room.status] || "text-slate-500";
 
   const canJoin = room.status === "waiting" && room.playerCount < 4;
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between hover:border-slate-600 transition">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between hover:border-slate-300 transition shadow-sm">
       <div>
-        <p className="text-white font-medium">{room.name}</p>
+        <p className="text-slate-800 font-bold text-sm">{room.name}</p>
         {room.description && (
-          <p className="text-slate-400 text-xs mt-1 italic max-w-md line-clamp-2">{room.description}</p>
+          <p className="text-slate-500 text-xs mt-1 italic max-w-md line-clamp-2">{room.description}</p>
         )}
-        <p className={`text-sm ${statusColor} capitalize mt-1`}>
+        <p className={`text-xs font-semibold ${statusColor} capitalize mt-1`}>
           {room.status.replace("_", " ")} · {room.playerCount}/4 players
         </p>
       </div>
       <button
         onClick={onJoin}
         disabled={!canJoin || loading}
-        className="bg-green-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed transition text-sm"
+        className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs shadow-sm"
       >
         {canJoin ? "Join" : room.playerCount >= 4 ? "Full" : "In Progress"}
       </button>
     </div>
   );
 }
-

@@ -31,7 +31,7 @@ export default function RoomPage() {
     joinRoom(roomId).then((res) => {
       if (!res.ok) {
         alert(res.error === "ROOM_FULL" ? "Room is full." : res.error);
-        router.push("/lobby");
+        router.push("/");
       } else {
         setJoined(true);
       }
@@ -58,35 +58,34 @@ export default function RoomPage() {
   useEffect(() => {
     if (notification?.startsWith("Game starting")) {
       setCountdown(3);
-      const t = setInterval(() => setCountdown((c) => (c > 1 ? c - 1 : null)), 1000);
-      return () => clearInterval(t);
+    } else {
+      setCountdown(null);
     }
   }, [notification]);
 
-  function handleLeave() {
-    leaveRoom();
-    router.push("/lobby");
-  }
-
-  function handleChat(e) {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    sendChat(chatInput.trim());
-    setChatInput("");
+  async function handleLeave() {
+    await leaveRoom();
+    router.push("/");
   }
 
   async function handleUpdateRoom() {
-    if (!editName.trim()) return;
-    const res = await updateRoom(editName.trim(), editDescription.trim());
-    if (!res.ok) {
-      alert("Failed to update room settings: " + res.error);
-    }
+    const res = await updateRoom(editName, editDescription);
+    if (!res.ok) alert("Failed to update room settings: " + res.error);
   }
 
   async function handleKick(targetUserId) {
-    if (confirm("Are you sure you want to kick this player from the table?")) {
+    if (confirm("Are you sure you want to kick this player?")) {
       const res = await kickPlayer(targetUserId);
       if (!res.ok) alert("Failed to kick player: " + res.error);
+    }
+  }
+
+  async function handleSendChat(e) {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const res = await sendChat(chatInput);
+    if (res.ok) {
+      setChatInput("");
     }
   }
 
@@ -103,125 +102,130 @@ export default function RoomPage() {
   const isAdmin = roomAdminId && session?.userId && parseInt(roomAdminId) === parseInt(session.userId);
 
   return (
-    <main className="min-h-screen p-6 max-w-2xl mx-auto flex flex-col gap-6">
+    <main className="h-screen w-screen bg-slate-50 text-slate-800 flex flex-col p-4 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gold">Waiting Room</h1>
+      <div className="h-12 flex-shrink-0 flex items-center justify-between border-b border-slate-200 pb-2 z-10">
+        <div className="flex flex-col">
+          <h1 className="text-lg font-bold text-slate-800">{roomName || "Waiting Room"}</h1>
+          <p className="text-slate-500 text-xs">
+            Room Code: <span className="font-mono font-bold text-slate-900 bg-slate-200 px-1.5 py-0.5 rounded">{roomId}</span>
+          </p>
+        </div>
         <div className="flex gap-3 items-center">
-          <span className="text-slate-400 text-sm">{connected ? "🟢" : "🔴"}</span>
-          <button onClick={handleLeave} className="bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm transition">
+          <span className="text-slate-400 text-xs font-bold">{connected ? "🟢 Connected" : "🔴 Reconnecting"}</span>
+          <button onClick={handleLeave} className="bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition">
             Leave Room
           </button>
         </div>
       </div>
 
-      {/* Room code and info */}
-      <div className="flex flex-col gap-2">
-        <p className="text-slate-400 text-sm">
-          Room Code: <span className="font-mono text-white bg-slate-700 px-2 py-0.5 rounded">{roomId}</span>
-          <span className="ml-2 text-slate-500">— share this code to invite friends</span>
-        </p>
+      {/* Main Grid: Left side details, Right side chat */}
+      <div className="flex-1 flex gap-4 mt-3 overflow-hidden">
+        
+        {/* Left Side: Admin + Seating */}
+        <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1">
+          {/* Admin Settings Panel */}
+          {isAdmin && (
+            <section className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex flex-col gap-2.5">
+              <h2 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Room Settings (Admin)</h2>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-400"
+                  placeholder="Table Name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  maxLength={40}
+                />
+                <button
+                  onClick={handleUpdateRoom}
+                  className="bg-emerald-600 text-white font-bold px-3 py-1 rounded-lg text-xs hover:bg-emerald-700 transition"
+                >
+                  Save Details
+                </button>
+              </div>
+              <textarea
+                className="bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-emerald-500 text-xs h-10 resize-none placeholder-slate-400"
+                placeholder="Room Description / Rules (max 255 chars)…"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                maxLength={255}
+              />
+            </section>
+          )}
 
-        {/* Room description display for players */}
-        {!isAdmin && (
-          <div className="bg-slate-800/40 rounded-lg p-3 border border-slate-700/50 mt-1">
-            <h2 className="text-white text-sm font-semibold">{roomName || "Court Piece Table"}</h2>
-            {roomDescription && (
-              <p className="text-slate-400 text-xs mt-1 italic whitespace-pre-wrap">{roomDescription}</p>
+          {/* Description for non-admins */}
+          {!isAdmin && roomDescription && (
+            <div className="bg-white rounded-xl p-3.5 border border-slate-200 shadow-sm">
+              <h2 className="text-slate-800 font-bold text-xs">Description & Rules</h2>
+              <p className="text-slate-600 text-xs mt-1 italic whitespace-pre-wrap">{roomDescription}</p>
+            </div>
+          )}
+
+          {/* Seats */}
+          <section className="bg-white rounded-xl p-3.5 border border-slate-200 shadow-sm flex-1 flex flex-col">
+            <h2 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-2.5">Players ({playerCount}/4)</h2>
+            <div className="grid grid-cols-2 gap-2.5 flex-1 items-center">
+              {filledSeats.map((player, idx) => (
+                <SeatCard 
+                  key={idx} 
+                  seat={idx} 
+                  player={player} 
+                  isYou={player?.userId === session?.userId} 
+                  isAdmin={isAdmin}
+                  onAvatarClick={setSelectedPlayerId} 
+                  onKick={handleKick}
+                  onTransferAdmin={handleTransferAdmin}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* Countdown overlay */}
+          {countdown && (
+            <div className="bg-emerald-600 border border-emerald-500 rounded-xl p-3 text-center">
+              <p className="text-white font-bold text-sm animate-pulse">🃏 Game starting in {countdown}…</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right Side: Chat Panel */}
+        <section className="w-72 flex-shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+          <div className="px-3.5 py-2 border-b border-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider">Chat</div>
+          <div className="flex-1 overflow-y-auto px-3.5 py-2 flex flex-col gap-1">
+            {chatMessages.length === 0 && (
+              <p className="text-slate-400 text-xs text-center mt-4">No messages yet</p>
             )}
+            {chatMessages.map((msg, i) => (
+              <div key={i} className="text-xs">
+                <span className="text-emerald-700 font-bold">{msg.username}: </span>
+                <span className="text-slate-700">{msg.message}</span>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
 
-      {/* Admin Settings Panel */}
-      {isAdmin && (
-        <section className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-col gap-3">
-          <h2 className="text-slate-300 font-semibold text-sm">Room Settings (Admin)</h2>
-          <div className="flex gap-3">
+          <form onSubmit={handleSendChat} className="p-2.5 border-t border-slate-100 flex gap-2">
             <input
-              className="flex-1 bg-slate-700 text-white rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-gold text-sm placeholder-slate-500"
-              placeholder="Table Name"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              maxLength={40}
+              type="text"
+              placeholder={isChatActive ? "Type a message…" : "Needs 2+ players"}
+              disabled={!isChatActive}
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              maxLength={200}
             />
             <button
-              onClick={handleUpdateRoom}
-              className="bg-gold text-slate-900 font-bold px-4 py-1.5 rounded-lg text-xs hover:bg-yellow-400 transition"
+              type="submit"
+              disabled={!isChatActive || !chatInput.trim()}
+              className="bg-emerald-600 text-white font-bold px-3 py-1 rounded-lg text-xs hover:bg-emerald-700 transition disabled:opacity-50"
             >
-              Save Details
+              Send
             </button>
-          </div>
-          <textarea
-            className="bg-slate-700 text-white rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-gold text-xs h-14 resize-none placeholder-slate-500"
-            placeholder="Room Description / Rules (max 255 chars)…"
-            value={editDescription}
-            onChange={(e) => setEditDescription(e.target.value)}
-            maxLength={255}
-          />
+          </form>
         </section>
-      )}
 
-      {/* Seats */}
-      <section className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-        <h2 className="text-slate-300 font-medium mb-4">Players ({playerCount}/4)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filledSeats.map((player, idx) => (
-            <SeatCard 
-              key={idx} 
-              seat={idx} 
-              player={player} 
-              isYou={player?.userId === session?.userId} 
-              isAdmin={isAdmin}
-              onAvatarClick={setSelectedPlayerId} 
-              onKick={handleKick}
-              onTransferAdmin={handleTransferAdmin}
-            />
-          ))}
-        </div>
-      </section>
+      </div>
 
-      {/* Countdown overlay */}
-      {countdown && (
-        <div className="bg-green-800 border border-green-600 rounded-xl p-4 text-center">
-          <p className="text-green-300 font-bold text-lg">🃏 Game starting in {countdown}…</p>
-        </div>
-      )}
-
-      {/* Chat */}
-      <section className="bg-slate-800 rounded-xl border border-slate-700 flex flex-col" style={{ height: 280 }}>
-        <div className="px-4 py-2 border-b border-slate-700 text-slate-400 text-sm font-medium">Chat</div>
-        <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1">
-          {chatMessages.length === 0 && (
-            <p className="text-slate-600 text-sm text-center mt-4">No messages yet</p>
-          )}
-          {chatMessages.map((msg, i) => (
-            <div key={i} className="text-sm">
-              <span className="text-gold font-medium">{msg.username}: </span>
-              <span className="text-slate-200">{msg.message}</span>
-            </div>
-          ))}
-        </div>
-        <form onSubmit={handleChat} className="flex border-t border-slate-700">
-          <input
-            className="flex-1 bg-transparent text-white px-4 py-2 text-sm outline-none placeholder-slate-600 disabled:opacity-50"
-            placeholder={isChatActive ? "Type here…" : "Chat disabled: Minimum 2 players required"}
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            disabled={!isChatActive}
-            maxLength={200}
-          />
-          <button 
-            type="submit" 
-            className="px-4 text-gold font-medium text-sm hover:text-yellow-300 transition disabled:opacity-40 disabled:hover:text-gold"
-            disabled={!isChatActive}
-          >
-            Send
-          </button>
-        </form>
-      </section>
-
-      {/* Player Stats Popup */}
+      {/* Selected player stats popup */}
       {selectedPlayerId && (
         <PlayerStatsModal
           userId={selectedPlayerId}
@@ -234,44 +238,44 @@ export default function RoomPage() {
 
 function SeatCard({ seat, player, isYou, isAdmin, onAvatarClick, onKick, onTransferAdmin }) {
   const teamLabel = seat % 2 === 0 ? "Team A" : "Team B";
-  const teamColor = seat % 2 === 0 ? "text-blue-400" : "text-red-400";
+  const teamColor = seat % 2 === 0 ? "text-blue-600" : "text-rose-600";
 
   return (
     <div 
-      className={`rounded-xl border p-3 flex items-center justify-between select-none ${player && !player.isBot ? "bg-slate-700 border-slate-600" : "bg-slate-900 border-dashed border-slate-700"}`}
+      className={`rounded-xl border p-2.5 flex items-center justify-between select-none ${player && !player.isBot ? "bg-slate-50 border-slate-200 shadow-sm" : "bg-slate-100 border-dashed border-slate-300"}`}
     >
       <div 
         onClick={() => player && !player.isBot && onAvatarClick && onAvatarClick(player.userId)}
-        className={`flex items-center gap-3 min-w-0 ${player && !player.isBot ? "cursor-pointer hover:opacity-85 transition" : ""}`}
+        className={`flex items-center gap-2.5 min-w-0 ${player && !player.isBot ? "cursor-pointer hover:opacity-80 transition" : ""}`}
       >
-        <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-lg overflow-hidden flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-sm font-bold text-slate-700 overflow-hidden flex-shrink-0">
           {player?.avatarUrl ? (
             <img src={player.avatarUrl} alt={player.username} className="w-full h-full object-cover" />
           ) : player ? (
             player.username[0].toUpperCase()
           ) : (
-            <span className="text-slate-500">?</span>
+            <span className="text-slate-400 font-normal">?</span>
           )}
         </div>
         <div className="min-w-0">
-          <p className="text-white text-sm font-medium truncate">
-            {player ? player.username : "Waiting…"}
-            {isYou && <span className="ml-1 text-xs text-gold">(you)</span>}
+          <p className="text-slate-800 text-xs font-bold truncate">
+            {player ? player.username : "Empty seat"}
+            {isYou && <span className="ml-1 text-[10px] text-emerald-600">(you)</span>}
           </p>
-          <p className={`text-xs ${teamColor}`}>{teamLabel} · Seat {seat + 1}</p>
+          <p className={`text-[10px] font-semibold ${teamColor}`}>{teamLabel} · Seat {seat + 1}</p>
         </div>
       </div>
 
       {/* Admin Actions */}
       {isAdmin && player && !player.isBot && !isYou && (
-        <div className="flex gap-1.5 flex-shrink-0 ml-2">
+        <div className="flex gap-1 flex-shrink-0 ml-1.5">
           <button 
             title="Make Admin"
             onClick={(e) => {
               e.stopPropagation();
               onTransferAdmin(player.userId);
             }} 
-            className="text-[10px] bg-gold hover:bg-yellow-400 text-slate-900 font-bold px-2 py-1 rounded transition text-center"
+            className="text-[9px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-1.5 py-0.5 rounded transition text-center"
           >
             Admin
           </button>
@@ -281,7 +285,7 @@ function SeatCard({ seat, player, isYou, isAdmin, onAvatarClick, onKick, onTrans
               e.stopPropagation();
               onKick(player.userId);
             }} 
-            className="text-[10px] bg-red-600 hover:bg-red-500 text-white font-bold px-2 py-1 rounded transition text-center"
+            className="text-[9px] bg-rose-600 hover:bg-rose-700 text-white font-bold px-1.5 py-0.5 rounded transition text-center"
           >
             Kick
           </button>

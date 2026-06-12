@@ -32,6 +32,22 @@ const PORT = process.env.PORT || 3001;
 
 async function start() {
   await initRedis();
+
+  // Clean up all solo rooms and games from Redis on startup
+  const { getRedis } = require("./redis/client");
+  const redis = getRedis();
+  try {
+    const soloRoomKeys = await redis.keys("room:SOLO-*");
+    const soloGameKeys = await redis.keys("game:SOLO-*");
+    const keysToDelete = [...soloRoomKeys, ...soloGameKeys];
+    if (keysToDelete.length > 0) {
+      await redis.del(keysToDelete);
+      console.log(`[Startup] Cleaned up ${keysToDelete.length} solo room/game keys from Redis.`);
+    }
+  } catch (err) {
+    console.error("[Startup] Failed to clean up solo keys:", err);
+  }
+
   httpServer.listen(PORT, () => {
     console.log(`Node server running on port ${PORT}`);
   });

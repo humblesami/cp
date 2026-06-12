@@ -127,3 +127,16 @@ Verified & Improved Reconnection Flow Specifications:
 5. Solo Play hSet Bug Fix:
    - Resolved a Redis hSet TypeError where `updateRoomMetadata` was called with an object instead of positional parameters.
    - Refactored `updateRoomMetadata` to dynamically accept both object-style field updates and standard positional parameters.
+
+6. Game Loop Crash Fix:
+   - Fixed a game engine crash in `validator.js` (TypeError: cannot read properties of null (reading '1') at getSuit).
+   - The crash occurred because when resetting `currentTrick` for consecutive tricks, the engine set `ledBy: trickWinner` before any card was played, making subsequent suit validations check a null card index.
+   - Changed the engine to reset `ledBy` to `null` on new tricks, letting `playCard` assign it dynamically when the first card is led.
+   - Added a Game Loop Simulation integration test to `engine.test.js` to ensure the bug is fully patched.
+
+7. Light Theme & Scroll-Free Responsive Layout:
+   - Refactored `/`, `/lobby`, `/room/[id]`, and `/game/[id]` to use a clean, high-contrast light theme.
+   - Designed the Waiting Room and Game Board to be entirely scroll-free.
+   - Used viewport-relative percentages for player seat placements on the table so the layout adapts seamlessly to mobile landscape and PC aspect ratios.
+   - Overlaid the bottom player's hand over the table margin to conserve vertical height, and added a slide-out mobile drawer for room chat.
+   - Programmed the server to automatically flush all stale solo keys (`room:SOLO-*` and `game:SOLO-*`) from Redis on startup.

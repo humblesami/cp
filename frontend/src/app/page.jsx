@@ -13,25 +13,25 @@ export default function HomePage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gold text-xl animate-pulse">Loading…</div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-emerald-700 text-xl font-bold animate-pulse">Loading…</div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-8 px-4">
+    <main className="min-h-screen flex flex-col items-center justify-center gap-8 px-4 bg-slate-50 text-slate-800">
       <div className="text-center">
-        <h1 className="text-6xl font-bold text-gold mb-2 tracking-wide">♠ Court Piece</h1>
-        <p className="text-slate-400 text-lg">Rung · Hokm · The Classic South Asian Card Game</p>
+        <h1 className="text-5xl font-black text-emerald-700 mb-2 tracking-wide">♠ Court Piece</h1>
+        <p className="text-slate-500 text-base">Rung · Hokm · The Classic South Asian Card Game</p>
       </div>
 
-      <div className="bg-slate-800 rounded-2xl p-8 w-full max-w-sm flex flex-col gap-4 shadow-2xl border border-slate-700">
-        <h2 className="text-center text-white text-xl font-semibold mb-2">Sign in to Play</h2>
+      <div className="bg-white rounded-2xl p-8 w-full max-w-sm flex flex-col gap-4 shadow-xl border border-slate-200">
+        <h2 className="text-center text-slate-800 text-lg font-bold mb-2">Sign in to Play</h2>
 
         <button
           onClick={() => signIn("google", { callbackUrl: "/lobby" })}
-          className="flex items-center justify-center gap-3 bg-white text-gray-800 font-medium py-3 px-6 rounded-xl hover:bg-gray-100 transition"
+          className="flex items-center justify-center gap-3 bg-white text-slate-700 font-bold py-3 px-6 rounded-xl hover:bg-slate-50 border border-slate-200 transition shadow-sm"
         >
           <GoogleIcon />
           Continue with Google
@@ -39,26 +39,25 @@ export default function HomePage() {
 
         <button
           onClick={() => signIn("facebook", { callbackUrl: "/lobby" })}
-          className="flex items-center justify-center gap-3 bg-blue-600 text-white font-medium py-3 px-6 rounded-xl hover:bg-blue-700 transition"
+          className="flex items-center justify-center gap-3 bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition shadow-sm"
         >
           <FacebookIcon />
           Continue with Facebook
         </button>
 
-        <div className="relative my-1">
-          <hr className="border-slate-600" />
-          <span className="absolute inset-x-0 -top-2.5 text-center text-slate-500 text-sm">
-            <span className="bg-slate-800 px-2">or</span>
+        <div className="relative my-2">
+          <hr className="border-slate-200" />
+          <span className="absolute inset-x-0 -top-2.5 text-center text-slate-400 text-xs font-semibold">
+            <span className="bg-white px-2">or</span>
           </span>
         </div>
 
-        {/* Email/password form placeholder */}
-        <p className="text-center text-slate-500 text-sm">
+        <p className="text-center text-slate-400 text-xs font-bold">
           Email login coming soon
         </p>
       </div>
 
-      <p className="text-slate-600 text-sm">4 players · 52 cards · One trump to rule them all</p>
+      <p className="text-slate-500 text-xs font-bold">4 players · 52 cards · One trump to rule them all</p>
     </main>
   );
 }
