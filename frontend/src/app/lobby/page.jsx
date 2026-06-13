@@ -52,7 +52,7 @@ export default function LobbyPage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/rooms`);
         const data = await res.json();
         setRooms(data);
-      } catch {}
+      } catch { }
     };
     fetchRooms();
     const interval = setInterval(fetchRooms, 3000);
@@ -61,7 +61,7 @@ export default function LobbyPage() {
 
   // Auto scroll chat to bottom
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [lobbyMessages]);
 
   async function handleCreateSoloRoom() {
@@ -200,11 +200,11 @@ export default function LobbyPage() {
               />
             </div>
             <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold">
-              <input 
-                type="checkbox" 
-                id="isPrivate" 
-                checked={isPrivate} 
-                onChange={(e) => setIsPrivate(e.target.checked)} 
+              <input
+                type="checkbox"
+                id="isPrivate"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
                 className="w-4 h-4 rounded border-slate-300 accent-emerald-600"
               />
               <label htmlFor="isPrivate">Private Room (Hide from public list)</label>
@@ -266,13 +266,12 @@ export default function LobbyPage() {
             {lobbyMessages.map((msg, idx) => {
               const isMod = msg.role === "moderator";
               return (
-                <div 
-                  key={idx} 
-                  className={`p-3 rounded-lg text-xs transition ${
-                    isMod 
-                      ? "bg-amber-50 border-l-4 border-amber-500 text-amber-900" 
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg text-xs transition ${isMod
+                      ? "bg-amber-50 border-l-4 border-amber-500 text-amber-900"
                       : "bg-slate-50 border border-slate-100 text-slate-800"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-1.5">
@@ -303,8 +302,8 @@ export default function LobbyPage() {
               onChange={(e) => setLobbyChatInput(e.target.value)}
               maxLength={200}
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 disabled:opacity-50 transition shadow-sm"
               disabled={!lobbyChatInput.trim()}
             >

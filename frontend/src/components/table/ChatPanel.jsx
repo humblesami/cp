@@ -8,7 +8,7 @@ export default function ChatPanel() {
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
   function handleSubmit(e) {

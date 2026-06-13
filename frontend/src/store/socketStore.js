@@ -251,11 +251,31 @@ export const useSocketStore = create((set, get) => ({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const SUIT_ORDER = { S: 0, H: 1, D: 2, C: 3 };
+const RANK_ORDER = {
+  "2": 0, "3": 1, "4": 2, "5": 3, "6": 4, "7": 5, "8": 6, "9": 7,
+  "T": 8, "J": 9, "Q": 10, "K": 11, "A": 12
+};
+
+function sortHand(hand) {
+  if (!hand) return [];
+  return [...hand].sort((a, b) => {
+    const suitA = a[1];
+    const suitB = b[1];
+    if (suitA !== suitB) {
+      return SUIT_ORDER[suitA] - SUIT_ORDER[suitB];
+    }
+    const rankA = a[0];
+    const rankB = b[0];
+    return RANK_ORDER[rankB] - RANK_ORDER[rankA]; // Descending rank (A down to 2)
+  });
+}
+
 function flattenView(view) {
   return {
     gamePhase: view.phase,
     yourSeat: view.yourSeat,
-    yourHand: view.yourHand,
+    yourHand: sortHand(view.yourHand),
     handSizes: view.handSizes,
     currentTrick: view.currentTrick,
     trump: view.trump,

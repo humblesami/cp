@@ -137,6 +137,11 @@ Verified & Improved Reconnection Flow Specifications:
 7. Light Theme & Scroll-Free Responsive Layout:
    - Refactored `/`, `/lobby`, `/room/[id]`, and `/game/[id]` to use a clean, high-contrast light theme.
    - Designed the Waiting Room and Game Board to be entirely scroll-free.
-   - Used viewport-relative percentages for player seat placements on the table so the layout adapts seamlessly to mobile landscape and PC aspect ratios.
-   - Overlaid the bottom player's hand over the table margin to conserve vertical height, and added a slide-out mobile drawer for room chat.
+   - Restructured the game page into a three-column layout: ScoreCard, turn info, and leave button on the left panel; a perfectly round centered felt table in the center panel; and a decreased-width chat panel on the right panel.
+   - Positioned player seats symmetrically around the circular table.
+   - Placed the player's fanned cards in a dedicated, clean bottom bar.
    - Programmed the server to automatically flush all stale solo keys (`room:SOLO-*` and `game:SOLO-*`) from Redis on startup.
+
+8. Trump Selection & Card Sorting:
+   - Limited card exposure during `trump_selection` phase so players are only dealt/offered their first 5 cards (enforced securely in `getPlayerView` on the server and visually rendered in `TrumpSelector`).
+   - Integrated automatic sorting of the player's hand by suit (Spades, Hearts, Diamonds, Clubs) and rank (descending, A down to 2) inside the frontend store state.

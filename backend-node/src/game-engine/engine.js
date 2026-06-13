@@ -154,6 +154,9 @@ function startNewHand(state) {
  * Build the state payload to send to a specific player (hides other players' cards).
  */
 function getPlayerView(state, seatIndex) {
+  const fullHand = state.hands[seatIndex] || [];
+  const yourHand = state.phase === "trump_selection" ? fullHand.slice(0, 5) : fullHand;
+
   return {
     phase: state.phase,
     trump: state.trump,
@@ -161,8 +164,8 @@ function getPlayerView(state, seatIndex) {
     trumpCallerSeat: state.trumpCallerSeat,
     dealerSeat: state.dealerSeat,
     yourSeat: seatIndex,
-    yourHand: state.hands[seatIndex],
-    handSizes: state.hands.map((h) => h.length),
+    yourHand,
+    handSizes: state.hands.map((h) => state.phase === "trump_selection" ? Math.min(h.length, 5) : h.length),
     currentTrick: state.currentTrick,
     trickWinners: state.trickWinners,
     completedTricks: state.completedTricks || [],
