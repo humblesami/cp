@@ -7,6 +7,7 @@ const { getTeam } = require("./trick");
 function detectCoat(trickWinners) {
   if (trickWinners.length < 7) return null;
   const firstTeam = getTeam(trickWinners[0]);
+  if (!firstTeam) return null;
   for (let i = 1; i < 7; i++) {
     if (getTeam(trickWinners[i]) !== firstTeam) return null;
   }
@@ -19,6 +20,7 @@ function detectCoat(trickWinners) {
 function detectCourt(trickWinners) {
   if (trickWinners.length < 13) return null;
   const firstTeam = getTeam(trickWinners[0]);
+  if (!firstTeam) return null;
   if (trickWinners.every((s) => getTeam(s) === firstTeam)) return firstTeam;
   return null;
 }
@@ -28,8 +30,8 @@ function detectCourt(trickWinners) {
  * Returns { winningTeam, tricksA, tricksB, isCourt, isCoat, pointsA, pointsB }
  */
 function scoreHand(trickWinners) {
-  const tricksA = trickWinners.filter((s) => getTeam(s) === "A").length;
-  const tricksB = trickWinners.filter((s) => getTeam(s) === "B").length;
+  const tricksA = trickWinners.filter((s) => s !== null && s !== undefined && getTeam(s) === "A").length;
+  const tricksB = trickWinners.filter((s) => s !== null && s !== undefined && getTeam(s) === "B").length;
   const winningTeam = tricksA >= 7 ? "A" : "B";
   const isCourt = detectCourt(trickWinners) !== null;
   const isCoat = detectCoat(trickWinners) !== null;

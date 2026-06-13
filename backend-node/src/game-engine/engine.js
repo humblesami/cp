@@ -1,4 +1,4 @@
-const { deal, getSuit } = require("./deck");
+const { deal, getSuit, isAce } = require("./deck");
 const { isLegalPlay } = require("./validator");
 const { resolveTrick, getTeam } = require("./trick");
 const { scoreHand, detectCoat, checkMatchOver } = require("./scorer");
@@ -28,6 +28,8 @@ function createGameState(seats, dealerSeat = 0) {
     score: { A: 0, B: 0 },       // match score (hands won)
     handResults: [],              // history of hand results
     startedAt: Date.now(),
+    seniorSeats: [],              // history of who was senior of each trick
+    pileStartIndex: 0,            // trick index where current pile started
   };
 }
 
@@ -84,8 +86,37 @@ function playCard(state, seatIndex, card) {
   }
 
   // Trick complete — resolve winner
-  const trickWinner = resolveTrick(newTrick, state.trump);
-  const newTrickWinners = [...state.trickWinners, trickWinner];
+  const lastTrick = state.completedTricks && state.completedTricks.length > 0
+    ? state.completedTricks[state.completedTricks.length - 1]
+    : null;
+  const seniorSeat = resolveTrick(newTrick, state.trump, lastTrick);
+  const newSeniorSeats = [...(state.seniorSeats || []), seniorSeat];
+
+  let newTrickWinners = [...state.trickWinners, null];
+  const t = newTrickWinners.length - 1; // current trick index (0 to 12)
+  let newPileStartIndex = state.pileStartIndex ?? 0;
+
+  const canWinPile = (
+    t - 1 >= newPileStartIndex &&
+    t - 1 >= 1 &&
+    seniorSeat === newSeniorSeats[t - 1]
+  );
+
+  const seniorCard = newTrick.cards[seniorSeat];
+  const isAceCard = isAce(seniorCard);
+  const isLastTrick = (t === 12);
+  const allowedByAceRule = !isAceCard || isLastTrick;
+
+  const winsPile = (canWinPile && allowedByAceRule) || isLastTrick;
+
+  let trickWinner = null;
+  if (winsPile) {
+    trickWinner = seniorSeat;
+    for (let i = newPileStartIndex; i <= t; i++) {
+      newTrickWinners[i] = seniorSeat;
+    }
+    newPileStartIndex = t + 1;
+  }
 
   // Check coat (first 7 consecutive)
   const coatWinner = detectCoat(newTrickWinners);
@@ -105,12 +136,13 @@ function playCard(state, seatIndex, card) {
     newPhase = matchWinner ? "match_over" : "hand_complete";
   }
 
-  const nextTurn = handComplete ? null : trickWinner;
+  const nextTurn = handComplete ? null : seniorSeat;
 
   const completedTrick = {
     ledBy: newTrick.ledBy,
     cards: newTrick.cards,
     winner: trickWinner,
+    senior: seniorSeat,
   };
 
   const newState = {
@@ -123,6 +155,8 @@ function playCard(state, seatIndex, card) {
     score: newScore,
     phase: newPhase,
     handResults: handComplete ? [...state.handResults, handResult] : state.handResults,
+    seniorSeats: newSeniorSeats,
+    pileStartIndex: newPileStartIndex,
   };
 
   return { newState, trickComplete: true, trickWinner, coatDetected: coatWinner, handComplete, handResult };
@@ -147,6 +181,8 @@ function startNewHand(state) {
     currentTrick: { ledBy: null, cards: { 0: null, 1: null, 2: null, 3: null } },
     trickWinners: [],
     completedTricks: [],
+    seniorSeats: [],
+    pileStartIndex: 0,
   };
 }
 

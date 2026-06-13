@@ -1,8 +1,8 @@
 "use client";
 
 export default function ScoreCard({ score, trickWinners }) {
-  const tricksA = trickWinners?.filter((s) => s % 2 === 0).length ?? 0;
-  const tricksB = trickWinners?.filter((s) => s % 2 !== 0).length ?? 0;
+  const tricksA = trickWinners?.filter((s) => s !== null && s !== undefined && s % 2 === 0).length ?? 0;
+  const tricksB = trickWinners?.filter((s) => s !== null && s !== undefined && s % 2 !== 0).length ?? 0;
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-center shadow-sm w-full">

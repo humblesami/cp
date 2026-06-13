@@ -104,8 +104,11 @@ async function processCardPlay(io, roomId, state, seatIndex, card) {
     await delay(500); // small pause before showing trick result
     io.to(roomId).emit("trick_won", {
       winningSeat: trickWinner,
-      winningTeam: newState.trickWinners.length > 0 ? getTeamOf(trickWinner) : null,
-      tricksCount: { A: newState.trickWinners.filter(s => getTeamOf(s) === "A").length, B: newState.trickWinners.filter(s => getTeamOf(s) === "B").length },
+      winningTeam: getTeamOf(trickWinner),
+      tricksCount: {
+        A: newState.trickWinners.filter(s => s !== null && s !== undefined && getTeamOf(s) === "A").length,
+        B: newState.trickWinners.filter(s => s !== null && s !== undefined && getTeamOf(s) === "B").length
+      },
       coat: coatDetected,
     });
   }
@@ -141,11 +144,16 @@ async function triggerBotPlay(io, roomId, state, botSeat) {
   const fresh = await getGameState(roomId); // re-read in case state changed
   if (!fresh || fresh.turn !== botSeat) return;
 
+  const lastTrick = fresh.completedTricks && fresh.completedTricks.length > 0
+    ? fresh.completedTricks[fresh.completedTricks.length - 1]
+    : null;
+
   const card = botChooseCard(
     fresh.hands[botSeat],
     fresh.currentTrick,
     fresh.trump,
-    botSeat
+    botSeat,
+    lastTrick
   );
 
   await processCardPlay(io, roomId, fresh, botSeat, card);
@@ -205,11 +213,16 @@ function scheduleTurnTimer(io, roomId, state) {
         const freshState = await getGameState(roomId);
         if (!freshState || freshState.turn !== nextSeat || freshState.phase !== "playing") return;
 
+        const lastTrick = freshState.completedTricks && freshState.completedTricks.length > 0
+          ? freshState.completedTricks[freshState.completedTricks.length - 1]
+          : null;
+
         const card = botChooseCard(
           freshState.hands[nextSeat],
           freshState.currentTrick,
           freshState.trump,
-          nextSeat
+          nextSeat,
+          lastTrick
         );
 
         console.log(`[Timer] Auto-playing card ${card} for player ${freshState.seats[nextSeat]?.username} due to timeout.`);
@@ -248,7 +261,10 @@ async function recordMatchToNextjs(roomId, state, winningTeam) {
   }
 }
 
-function getTeamOf(seat) { return seat % 2 === 0 ? "A" : "B"; }
+function getTeamOf(seat) {
+  if (seat === null || seat === undefined) return null;
+  return seat % 2 === 0 ? "A" : "B";
+}
 function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 module.exports = { registerGameHandlers, triggerBotPlay, triggerBotTrump };

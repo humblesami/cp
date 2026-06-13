@@ -148,3 +148,13 @@ Verified & Improved Reconnection Flow Specifications:
 
 9. Solo Match Turn Timeout:
    - Configured the autoplay turn timeout to be 5 minutes in rooms starting with `SOLO-`, while keeping it at 10 seconds for real multiplayer rooms.
+
+10. Trick winning rules 
+--------------------------------------------------------------------------------
+[x] STATUS: COMPLETED
+    - Implemented Double Sir (Double Sar) rules where tricks are piled in the center and collected only when a player wins two consecutive tricks.
+    - Excluded the first trick of the hand from pile collection.
+    - Applied the Ace winning restriction where a consecutive trick won by an Ace cannot collect the pile (except for the 13th/last trick of the hand, which collects everything remaining).
+    - Implemented the consecutive Ace demotion rule where an Ace played immediately after another Ace by the same player in adjacent tricks is demoted to a rank value of -1 (minimal card of the suit).
+    - Updated bot decision-making logic to factor in the demoted rank value when leading or following.
+    - Updated frontend ScoreCard component to safely ignore null (uncollected) tricks.
