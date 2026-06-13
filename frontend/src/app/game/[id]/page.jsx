@@ -9,12 +9,22 @@ import { useSocket } from "../../../hooks/useSocket";
 import PlayingCard from "../../../components/table/PlayingCard";
 import PlayerSeat from "../../../components/table/PlayerSeat";
 import ScoreCard from "../../../components/table/ScoreCard";
-import TrumpIndicator from "../../../components/table/TrumpIndicator";
 import TrumpSelector from "../../../components/table/TrumpSelector";
 import ChatPanel from "../../../components/table/ChatPanel";
 import HandCompleteModal from "../../../components/table/HandCompleteModal";
 import MatchOverModal from "../../../components/table/MatchOverModal";
 import PlayerStatsModal from "../../../components/ui/PlayerStatsModal";
+
+const RIVETS = [
+  { x: "50%", y: "4%" },
+  { x: "82.5%", y: "17.5%" },
+  { x: "96%", y: "50%" },
+  { x: "82.5%", y: "82.5%" },
+  { x: "50%", y: "96%" },
+  { x: "17.5%", y: "82.5%" },
+  { x: "4%", y: "50%" },
+  { x: "17.5%", y: "17.5%" },
+];
 
 export default function GamePage() {
   const { id: roomId } = useParams();
@@ -33,8 +43,6 @@ export default function GamePage() {
 
   const [joined, setJoined] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
-  const [showMobileChat, setShowMobileChat] = useState(false);
-  const [showMobileLeft, setShowMobileLeft] = useState(false);
 
   // Re-join the room on mount / reconnection
   useEffect(() => {
@@ -90,205 +98,217 @@ export default function GamePage() {
 
   const trickCards = currentTrick?.cards ?? {};
 
+  // Count uncollected tricks for Double Sir pile representation
+  const uncollectedTricksCount = trickWinners?.filter((w) => w === null || w === undefined).length ?? 0;
+
   return (
-    <div className="h-screen w-screen bg-slate-50 flex flex-col overflow-hidden text-slate-800 relative select-none">
-      {/* Top bar (Header) */}
-      <div className="h-12 flex-shrink-0 flex items-center justify-between px-4 bg-white border-b border-slate-200 shadow-sm z-30">
-        <span className="text-emerald-700 font-extrabold text-sm">♠ Court Piece</span>
+    <main
+      style={{ backgroundImage: "url('/images/bg.jpeg')" }}
+      className="h-screen w-screen bg-cover bg-center flex flex-col overflow-hidden text-slate-805 relative select-none"
+    >
+      {/* Top Left ScoreCard (Ruled-paper Clipboard layout) */}
+      <div className="absolute top-4 left-4 z-40">
+        <ScoreCard score={score} trickWinners={trickWinners} />
       </div>
 
-      {/* Notification toast */}
+      {/* Top Right Controls: Active Trump Card (Rung), Rules and Leave Button */}
+      <div className="absolute top-4 right-4 z-40 flex items-center gap-4">
+        {/* Rules Checked Badges */}
+        <div className="hidden md:flex items-center gap-2 bg-slate-900/85 border border-slate-700/80 rounded-xl px-3 py-2 text-[10px] text-slate-300 font-extrabold shadow tracking-wide uppercase">
+          <div className="flex items-center gap-1.5">
+            <span className="text-emerald-400 font-black">✓</span> No Ace on Ace
+          </div>
+          <span className="text-slate-700 font-normal">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-emerald-400 font-black">✓</span> Double Sir
+          </div>
+        </div>
+
+        {/* Trump (Rung) Card widget */}
+        {trump && (
+          <div className="bg-white border-2 border-amber-900/40 rounded-xl p-1.5 shadow-2xl text-center flex flex-col items-center w-16 relative">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Rung</span>
+            <div className={clsx(
+              "text-2xl font-bold leading-none select-none",
+              (trump === "H" || trump === "D") ? "text-red-650" : "text-slate-800"
+            )}>
+              {trump === "S" && "♠"}
+              {trump === "H" && "♥"}
+              {trump === "D" && "♦"}
+              {trump === "C" && "♣"}
+            </div>
+            <span className="text-[7px] font-black text-slate-500 mt-1 uppercase tracking-wider">
+              {trump === "S" && "Spades"}
+              {trump === "H" && "Hearts"}
+              {trump === "D" && "Diamonds"}
+              {trump === "C" && "Clubs"}
+            </span>
+          </div>
+        )}
+
+        {/* Leave Table Button */}
+        <button
+          onClick={handleQuit}
+          className="bg-red-700 hover:bg-red-800 text-white font-black px-4 py-2.5 rounded-xl text-xs transition uppercase tracking-wider shadow-lg border border-red-900/50"
+        >
+          Leave Room
+        </button>
+      </div>
+
+      {/* Notification Toast */}
       <AnimatePresence>
         {notification && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-md"
+            className="absolute top-24 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-md"
           >
             {notification}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Game Panel (Center) */}
-      <div className="flex-1 flex overflow-hidden relative">
+      {/* Game Table Area (Center Center) */}
+      <div className="flex-1 relative flex items-center justify-center p-6">
+        {/* Symmetrical 3D-styled Felt Table */}
+        <div className="aspect-square w-[55%] max-w-[340px] md:max-w-[380px] relative flex items-center justify-center bg-gradient-to-br from-red-800 to-red-950 border-[16px] border-slate-900 rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.85),0_15px_35px_rgba(0,0,0,0.65)]">
+          {/* Gold inner ring separator */}
+          <div className="absolute inset-1.5 border-2 border-amber-500/50 rounded-full pointer-events-none" />
 
-        {/* Left Panel: ScoreCard, Turn Info, and Quit button */}
-        <div className={clsx(
-          "w-48 flex-shrink-0 flex flex-col gap-3 p-3 border-r border-slate-200 bg-white z-30 transition-all duration-300",
-          "lg:relative lg:flex lg:translate-x-0",
-          showMobileLeft ? "fixed left-0 top-12 bottom-[144px] translate-x-0 shadow-2xl" : "fixed left-0 top-12 bottom-[144px] -translate-x-full lg:translate-x-0"
-        )}>
-          <ScoreCard score={score} trickWinners={trickWinners} />
+          {/* Gold rivets around the charcoal border */}
+          {RIVETS.map((rivet, idx) => (
+            <div
+              key={idx}
+              style={{ left: rivet.x, top: rivet.y }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-amber-300 to-amber-500 border border-amber-600 shadow-sm"
+            />
+          ))}
 
-          {/* Turn indicator */}
-          {gamePhase === "playing" && (
-            <div className={clsx(
-              "rounded-xl p-3 text-center border transition-all duration-300",
-              isYourTurn
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-slate-50 border-slate-200 text-slate-600"
-            )}>
-              <p className={clsx("font-bold text-xs", isYourTurn && "animate-pulse")}>
-                {isYourTurn ? "Your Turn!" : "Waiting for Turn…"}
-              </p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {isYourTurn ? "Play a valid card" : `${seats[turn]?.username || "Player"} is thinking`}
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <TrumpIndicator trump={trump} trumpCallerSeat={trumpCallerSeat} seats={seats} />
-            {/* Toggle buttons for side panels on mobile */}
-            <button
-              onClick={() => { setShowMobileLeft(!showMobileLeft); setShowMobileChat(false); }}
-              className="lg:hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg font-bold transition border border-slate-200"
-            >
-              📊 Score
-            </button>
-            <button
-              onClick={() => { setShowMobileChat(!showMobileChat); setShowMobileLeft(false); }}
-              className="lg:hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg font-bold transition border border-slate-200"
-            >
-              💬 Chat
-            </button>
+          {/* TOP player */}
+          <div className="absolute top-[-26%] left-1/2 -translate-x-1/2 z-20">
+            <PlayerSeat
+              seat={relativeSeats.top}
+              player={seats[relativeSeats.top]}
+              cardCount={handSizes[relativeSeats.top]}
+              isTurn={turn === relativeSeats.top}
+              trickCard={trickCards[relativeSeats.top]}
+              position="top"
+              onAvatarClick={setSelectedPlayerId}
+            />
           </div>
 
-          <button onClick={handleQuit} className="w-full mt-auto bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">
-            Leave Table
-          </button>
-        </div>
-
-        {/* Game Table Area (Center) */}
-        <div className="flex-1 relative flex items-center justify-center p-6 bg-slate-50">
-
-          {/* Perfectly Round felt table that centers exactly */}
-          <div className="aspect-square w-[75%] max-w-[320px] md:max-w-[350px] relative flex items-center justify-center bg-emerald-700 border-[10px] border-amber-800 rounded-full shadow-[inset_0_0_30px_rgba(0,0,0,0.5),0_8px_16px_rgba(0,0,0,0.25)]">
-
-            {/* TOP player */}
-            <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 z-20">
-              <PlayerSeat
-                seat={relativeSeats.top}
-                player={seats[relativeSeats.top]}
-                cardCount={handSizes[relativeSeats.top]}
-                isTurn={turn === relativeSeats.top}
-                trickCard={trickCards[relativeSeats.top]}
-                position="top"
-                onAvatarClick={setSelectedPlayerId}
-              />
-            </div>
-
-            {/* LEFT player */}
-            <div className="absolute left-[-15%] top-1/2 -translate-y-1/2 z-20">
-              <PlayerSeat
-                seat={relativeSeats.left}
-                player={seats[relativeSeats.left]}
-                cardCount={handSizes[relativeSeats.left]}
-                isTurn={turn === relativeSeats.left}
-                trickCard={trickCards[relativeSeats.left]}
-                position="left"
-                onAvatarClick={setSelectedPlayerId}
-              />
-            </div>
-
-            {/* RIGHT player */}
-            <div className="absolute right-[-15%] top-1/2 -translate-y-1/2 z-20">
-              <PlayerSeat
-                seat={relativeSeats.right}
-                player={seats[relativeSeats.right]}
-                cardCount={handSizes[relativeSeats.right]}
-                isTurn={turn === relativeSeats.right}
-                trickCard={trickCards[relativeSeats.right]}
-                position="right"
-                onAvatarClick={setSelectedPlayerId}
-              />
-            </div>
-
-            {/* BOTTOM player (Seat Label) */}
-            <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 z-20">
-              <PlayerSeat
-                seat={relativeSeats.bottom}
-                player={seats[relativeSeats.bottom]}
-                isYou
-                isTurn={isYourTurn}
-                trickCard={trickCards[relativeSeats.bottom]}
-                position="bottom"
-                onAvatarClick={setSelectedPlayerId}
-              />
-            </div>
-
-            {/* Center trick area — shows all 4 played cards */}
-            <div className="relative z-10 grid grid-cols-2 gap-4 w-44 h-48">
-              {[relativeSeats.top, relativeSeats.right, relativeSeats.left, relativeSeats.bottom].map((seatIdx, pos) => (
-                <div key={seatIdx} className={`flex ${pos < 2 ? "items-start" : "items-end"} ${pos % 2 === 0 ? "justify-start" : "justify-end"}`}>
-                  <AnimatePresence>
-                    {trickCards[seatIdx] && (
-                      <motion.div
-                        initial={{ scale: 0.5, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.5, opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      >
-                        <PlayingCard card={trickCards[seatIdx]} small />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ))}
-            </div>
-
+          {/* LEFT player */}
+          <div className="absolute left-[-26%] top-1/2 -translate-y-1/2 z-20">
+            <PlayerSeat
+              seat={relativeSeats.left}
+              player={seats[relativeSeats.left]}
+              cardCount={handSizes[relativeSeats.left]}
+              isTurn={turn === relativeSeats.left}
+              trickCard={trickCards[relativeSeats.left]}
+              position="left"
+              onAvatarClick={setSelectedPlayerId}
+            />
           </div>
 
-        </div>
+          {/* RIGHT player */}
+          <div className="absolute right-[-26%] top-1/2 -translate-y-1/2 z-20">
+            <PlayerSeat
+              seat={relativeSeats.right}
+              player={seats[relativeSeats.right]}
+              cardCount={handSizes[relativeSeats.right]}
+              isTurn={turn === relativeSeats.right}
+              trickCard={trickCards[relativeSeats.right]}
+              position="right"
+              onAvatarClick={setSelectedPlayerId}
+            />
+          </div>
 
-        {/* Right Panel: Chat (Decreased Width to 48) */}
-        <div className={clsx(
-          "w-48 flex-shrink-0 flex flex-col gap-3 p-3 border-l border-slate-200 bg-white z-30 transition-all duration-300",
-          "lg:relative lg:flex lg:translate-x-0",
-          showMobileChat ? "fixed right-0 top-12 bottom-[144px] translate-x-0 shadow-2xl" : "fixed right-0 top-12 bottom-[144px] translate-x-full lg:translate-x-0"
-        )}>
-          <ChatPanel />
+          {/* Double Sir Uncollected Card Pile (Rotated stack) */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            {uncollectedTricksCount > 0 && (
+              <div className="relative w-20 h-28 flex items-center justify-center">
+                {[...Array(Math.min(uncollectedTricksCount * 2, 8))].map((_, i) => {
+                  const rotateVal = (i - 3.5) * 12 + (i % 2 === 0 ? 6 : -6);
+                  const xVal = (i - 3.5) * 4;
+                  const yVal = (i % 2 === 0 ? 2 : -2);
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        transform: `rotate(${rotateVal}deg) translate(${xVal}px, ${yVal}px)`,
+                        zIndex: i,
+                      }}
+                      className="absolute w-14 h-20 bg-rose-900 border-2 border-white rounded shadow-md flex items-center justify-center overflow-hidden"
+                    >
+                      <div className="w-[85%] h-[85%] border border-rose-950 bg-red-800 rounded flex items-center justify-center text-rose-300 text-xs font-black select-none opacity-80">
+                        ♣
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
-
       </div>
 
-      {/* MY CARDS (Bottom) - Dedicated bottom section */}
-      <div className="h-36 flex-shrink-0 bg-white border-t border-slate-200 z-20 relative shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pointer-events-auto">
-        <div className="flex items-end justify-center h-full pb-4 relative perspective-1000">
-          {yourHand?.length > 0 ? (
-            yourHand.map((card, idx) => {
-              const n = yourHand.length;
-              const centerIndex = (n - 1) / 2;
-              const angle = (idx - centerIndex) * 3.5;
-              const yOffset = Math.pow(Math.abs(idx - centerIndex), 2) * 1.1;
+      {/* MY HAND & CHATTER BOX (Bottom Section) */}
+      <div className="h-40 flex-shrink-0 z-20 relative px-6 pb-4 flex justify-between items-end pointer-events-auto">
+        {/* Bottom Left: Sami's Avatar and Hand Area */}
+        <div className="flex items-end gap-6">
+          <div className="mb-2">
+            <PlayerSeat
+              seat={relativeSeats.bottom}
+              player={seats[relativeSeats.bottom]}
+              isYou
+              isTurn={isYourTurn}
+              trickCard={trickCards[relativeSeats.bottom]}
+              position="bottom"
+              onAvatarClick={setSelectedPlayerId}
+            />
+          </div>
 
-              return (
-                <div
-                  key={card}
-                  style={{
-                    transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
-                    transformOrigin: "bottom center",
-                    zIndex: idx + 10,
-                    marginLeft: idx === 0 ? 0 : "-75px",
-                  }}
-                  className="relative transition-all duration-300 hover:-translate-y-8 hover:z-50"
-                >
-                  <PlayingCard
-                    card={card}
-                    playable={isYourTurn && gamePhase === "playing"}
-                    onClick={() => handlePlayCard(card)}
-                    className="shadow-xl"
-                  />
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-slate-500 font-bold bg-white border border-slate-200 px-4 py-1.5 rounded-full text-xs shadow-sm self-center">
-              {gamePhase === "trump_selection" ? "Waiting for trump declaration…" : "Waiting for game to start…"}
-            </p>
-          )}
+          {/* Fanned Cards */}
+          <div className="flex items-end pb-3 relative perspective-1000">
+            {yourHand?.length > 0 ? (
+              yourHand.map((card, idx) => {
+                const n = yourHand.length;
+                const centerIndex = (n - 1) / 2;
+                const angle = (idx - centerIndex) * 3.5;
+                const yOffset = Math.pow(Math.abs(idx - centerIndex), 2) * 1.1;
+
+                return (
+                  <div
+                    key={card}
+                    style={{
+                      transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
+                      transformOrigin: "bottom center",
+                      zIndex: idx + 10,
+                      marginLeft: idx === 0 ? 0 : "-70px",
+                    }}
+                    className="relative transition-all duration-300 hover:-translate-y-8 hover:z-50"
+                  >
+                    <PlayingCard
+                      card={card}
+                      playable={isYourTurn && gamePhase === "playing"}
+                      onClick={() => handlePlayCard(card)}
+                      className="shadow-2xl"
+                    />
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-slate-300 font-bold bg-slate-900/60 border border-slate-700/80 px-5 py-2 rounded-full text-xs shadow-lg self-center">
+                {gamePhase === "trump_selection" ? "Waiting for trump declaration…" : "Waiting for game to start…"}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Right: Chatter Panel */}
+        <div className="w-72 h-[150px] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-30 mr-2">
+          <ChatPanel />
         </div>
       </div>
 
@@ -322,6 +342,6 @@ export default function GamePage() {
           onClose={() => setSelectedPlayerId(null)}
         />
       )}
-    </div>
+    </main>
   );
 }

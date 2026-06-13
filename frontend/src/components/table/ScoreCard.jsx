@@ -5,37 +5,61 @@ export default function ScoreCard({ score, trickWinners }) {
   const tricksB = trickWinners?.filter((s) => s !== null && s !== undefined && s % 2 !== 0).length ?? 0;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-center shadow-sm w-full">
-      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">ScoreCard</p>
-
-      {/* Current hand tricks */}
-      <div className="flex items-center justify-center gap-4 mb-1.5">
-        <div className="text-center">
-          <p className="text-blue-600 text-[10px] font-bold">Team A</p>
-          <p className="text-slate-800 text-lg font-black">{tricksA}</p>
-        </div>
-        <span className="text-slate-400 text-[10px] font-medium mt-3">tricks</span>
-        <div className="text-center">
-          <p className="text-rose-600 text-[10px] font-bold">Team B</p>
-          <p className="text-slate-800 text-lg font-black">{tricksB}</p>
-        </div>
+    <div className="w-52 bg-amber-50 rounded-2xl border-4 border-amber-900/45 shadow-2xl overflow-hidden relative font-sans text-slate-800">
+      {/* Clipboard Header Banner */}
+      <div className="bg-red-800 text-white text-center py-1.5 font-black text-xs uppercase tracking-wider shadow-inner border-b border-amber-900/30">
+        ScoreCard
       </div>
 
-      <hr className="border-slate-100 my-1.5" />
-
-      {/* Match score */}
-      <p className="text-slate-500 text-[10px] font-bold mb-1">Match</p>
-      <div className="flex items-center justify-center gap-2">
-        <div className="bg-blue-50 border border-blue-100 rounded px-2.5 py-0.5">
-          <span className="text-blue-700 font-extrabold text-sm">{score?.A ?? 0}</span>
+      {/* Ruled Paper Content Area */}
+      <div 
+        style={{
+          backgroundImage: "linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px)",
+          backgroundSize: "100% 24px"
+        }}
+        className="p-3 bg-yellow-50/70 flex flex-col gap-2.5 relative"
+      >
+        {/* Notebook header lines */}
+        <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-500 uppercase px-1">
+          <span>Current:</span>
+          <span className="mr-4">Overall:</span>
         </div>
-        <span className="text-slate-300 text-xs">—</span>
-        <div className="bg-rose-50 border border-rose-100 rounded px-2.5 py-0.5">
-          <span className="text-rose-700 font-extrabold text-sm">{score?.B ?? 0}</span>
+
+        {/* Team A (Yellow/Gold) Row */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-bold text-amber-800">Team A</span>
+          <div className="flex gap-4 items-center">
+            {/* Current Tricks score */}
+            <div className="w-7 h-7 bg-amber-400 border-2 border-amber-500 rounded flex items-center justify-center font-black text-sm text-slate-900 shadow-sm">
+              {tricksA}
+            </div>
+            {/* Overall match points score */}
+            <div className="w-7 h-7 bg-amber-500 border-2 border-amber-600 rounded flex items-center justify-center font-black text-sm text-slate-900 shadow-sm mr-2">
+              {score?.A ?? 0}
+            </div>
+          </div>
+        </div>
+
+        {/* Team B (Blue) Row */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-bold text-blue-800">Team B</span>
+          <div className="flex gap-4 items-center">
+            {/* Current Tricks score */}
+            <div className="w-7 h-7 bg-blue-500 border-2 border-blue-600 rounded flex items-center justify-center font-black text-sm text-white shadow-sm">
+              {tricksB}
+            </div>
+            {/* Overall match points score */}
+            <div className="w-7 h-7 bg-blue-700 border-2 border-blue-800 rounded flex items-center justify-center font-black text-sm text-white shadow-sm mr-2">
+              {score?.B ?? 0}
+            </div>
+          </div>
+        </div>
+
+        {/* Subtext */}
+        <div className="text-[9px] text-slate-500 text-center font-bold italic mt-0.5 border-t border-slate-200/50 pt-1.5">
+          First to 7 match points wins
         </div>
       </div>
-
-      <p className="text-slate-400 text-[9px] mt-1.5 font-bold">First to 7 wins</p>
     </div>
   );
 }

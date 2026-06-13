@@ -158,3 +158,14 @@ Verified & Improved Reconnection Flow Specifications:
     - Implemented the consecutive Ace demotion rule where an Ace played immediately after another Ace by the same player in adjacent tricks is demoted to a rank value of -1 (minimal card of the suit).
     - Updated bot decision-making logic to factor in the demoted rank value when leading or following.
     - Updated frontend ScoreCard component to safely ignore null (uncollected) tricks.
+
+11. Interactive Game Room Redesign (Reference Screenshot Match)
+--------------------------------------------------------------------------------
+[x] STATUS: COMPLETED
+    - Integrated `/images/bg.jpeg` background image featuring a blue radial starburst with watermarked card suit details.
+    - Recreated the circular felt table with a gradient from red-800 to red-950, surrounded by a charcoal slate border embedded with 8 responsive gold rivets and a gold inner ring.
+    - Repositioned played cards to render horizontally directly adjacent to their respective player's avatar.
+    - Modeled the uncollected Double Sir tricks as an overlapping, randomly-rotated stack of face-down card decks in the center of the felt table.
+    - Transformed the ScoreCard into a ruled-paper notebook clipboard style with custom cream-colored backing and yellow/blue team indicators.
+    - Cleaned up page height constraints to achieve a native, scroll-free viewport with no header bar.
+    - Set up the bottom row to group the player seat and fanned hand in the bottom-left and a compact ChatPanel in the bottom-right.
