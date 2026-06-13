@@ -197,6 +197,9 @@ function scheduleTurnTimer(io, roomId, state) {
   const isBot = state.seats[nextSeat]?.isBot;
 
   if (!isBot) {
+    const isSolo = roomId && roomId.startsWith("SOLO-");
+    const timeoutMs = isSolo ? 5 * 60 * 1000 : 10000;
+
     const timer = setTimeout(async () => {
       try {
         const freshState = await getGameState(roomId);
@@ -214,7 +217,7 @@ function scheduleTurnTimer(io, roomId, state) {
       } catch (err) {
         console.error("[Timer] Auto-play timeout handler error:", err);
       }
-    }, 10000);
+    }, timeoutMs);
 
     turnTimers.set(roomId, timer);
   }

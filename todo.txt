@@ -145,3 +145,6 @@ Verified & Improved Reconnection Flow Specifications:
 8. Trump Selection & Card Sorting:
    - Limited card exposure during `trump_selection` phase so players are only dealt/offered their first 5 cards (enforced securely in `getPlayerView` on the server and visually rendered in `TrumpSelector`).
    - Integrated automatic sorting of the player's hand by suit (Spades, Hearts, Diamonds, Clubs) and rank (descending, A down to 2) inside the frontend store state.
+
+9. Solo Match Turn Timeout:
+   - Configured the autoplay turn timeout to be 5 minutes in rooms starting with `SOLO-`, while keeping it at 10 seconds for real multiplayer rooms.

@@ -95,22 +95,6 @@ export default function GamePage() {
       {/* Top bar (Header) */}
       <div className="h-12 flex-shrink-0 flex items-center justify-between px-4 bg-white border-b border-slate-200 shadow-sm z-30">
         <span className="text-emerald-700 font-extrabold text-sm">♠ Court Piece</span>
-        <div className="flex items-center gap-2">
-          <TrumpIndicator trump={trump} trumpCallerSeat={trumpCallerSeat} seats={seats} />
-          {/* Toggle buttons for side panels on mobile */}
-          <button 
-            onClick={() => { setShowMobileLeft(!showMobileLeft); setShowMobileChat(false); }} 
-            className="lg:hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg font-bold transition border border-slate-200"
-          >
-            📊 Score
-          </button>
-          <button 
-            onClick={() => { setShowMobileChat(!showMobileChat); setShowMobileLeft(false); }} 
-            className="lg:hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg font-bold transition border border-slate-200"
-          >
-            💬 Chat
-          </button>
-        </div>
       </div>
 
       {/* Notification toast */}
@@ -129,7 +113,7 @@ export default function GamePage() {
 
       {/* Game Panel (Center) */}
       <div className="flex-1 flex overflow-hidden relative">
-        
+
         {/* Left Panel: ScoreCard, Turn Info, and Quit button */}
         <div className={clsx(
           "w-48 flex-shrink-0 flex flex-col gap-3 p-3 border-r border-slate-200 bg-white z-30 transition-all duration-300",
@@ -137,13 +121,13 @@ export default function GamePage() {
           showMobileLeft ? "fixed left-0 top-12 bottom-[144px] translate-x-0 shadow-2xl" : "fixed left-0 top-12 bottom-[144px] -translate-x-full lg:translate-x-0"
         )}>
           <ScoreCard score={score} trickWinners={trickWinners} />
-          
+
           {/* Turn indicator */}
           {gamePhase === "playing" && (
             <div className={clsx(
               "rounded-xl p-3 text-center border transition-all duration-300",
-              isYourTurn 
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+              isYourTurn
+                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                 : "bg-slate-50 border-slate-200 text-slate-600"
             )}>
               <p className={clsx("font-bold text-xs", isYourTurn && "animate-pulse")}>
@@ -155,6 +139,23 @@ export default function GamePage() {
             </div>
           )}
 
+          <div className="flex items-center gap-2">
+            <TrumpIndicator trump={trump} trumpCallerSeat={trumpCallerSeat} seats={seats} />
+            {/* Toggle buttons for side panels on mobile */}
+            <button
+              onClick={() => { setShowMobileLeft(!showMobileLeft); setShowMobileChat(false); }}
+              className="lg:hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg font-bold transition border border-slate-200"
+            >
+              📊 Score
+            </button>
+            <button
+              onClick={() => { setShowMobileChat(!showMobileChat); setShowMobileLeft(false); }}
+              className="lg:hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg font-bold transition border border-slate-200"
+            >
+              💬 Chat
+            </button>
+          </div>
+
           <button onClick={handleQuit} className="w-full mt-auto bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">
             Leave Table
           </button>
@@ -162,10 +163,10 @@ export default function GamePage() {
 
         {/* Game Table Area (Center) */}
         <div className="flex-1 relative flex items-center justify-center p-6 bg-slate-50">
-          
+
           {/* Perfectly Round felt table that centers exactly */}
           <div className="aspect-square w-[75%] max-w-[320px] md:max-w-[350px] relative flex items-center justify-center bg-emerald-700 border-[10px] border-amber-800 rounded-full shadow-[inset_0_0_30px_rgba(0,0,0,0.5),0_8px_16px_rgba(0,0,0,0.25)]">
-            
+
             {/* TOP player */}
             <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 z-20">
               <PlayerSeat
