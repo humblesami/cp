@@ -327,6 +327,7 @@ export default function GamePage() {
       <TrumpSelector
         visible={isHokмCaller}
         onSelect={handleDeclareTrump}
+        onLeave={handleQuit}
         first5Cards={yourHand?.slice(0, 5)}
       />
 

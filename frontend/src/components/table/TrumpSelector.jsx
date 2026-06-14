@@ -9,7 +9,7 @@ const SUITS = [
   { key: "S", symbol: "♠", name: "Spades" },
 ];
 
-export default function TrumpSelector({ visible, onSelect, first5Cards = [] }) {
+export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards = [] }) {
   return (
     <AnimatePresence>
       {visible && (
@@ -30,7 +30,7 @@ export default function TrumpSelector({ visible, onSelect, first5Cards = [] }) {
               <h2 className="text-white text-3xl font-black tracking-wider uppercase drop-shadow-lg">
                 Declare Trump (Rung)
               </h2>
-              <p className="text-slate-350 text-sm font-medium mt-1 opacity-90 drop-shadow-md">
+              <p className="text-slate-355 text-sm font-medium mt-1 opacity-90 drop-shadow-md">
                 Choose a suit based on your first 5 cards
               </p>
             </div>
@@ -83,6 +83,19 @@ export default function TrumpSelector({ visible, onSelect, first5Cards = [] }) {
                 </motion.button>
               ))}
             </div>
+
+            {/* Leave Table Button */}
+            {onLeave && (
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.7 }}
+                onClick={onLeave}
+                className="bg-red-700 hover:bg-red-800 active:scale-95 text-white font-black px-6 py-2.5 rounded-xl text-xs transition-all duration-200 uppercase tracking-wider shadow-lg border border-red-900/50 cursor-pointer"
+              >
+                Leave Room
+              </motion.button>
+            )}
           </motion.div>
         </motion.div>
       )}
