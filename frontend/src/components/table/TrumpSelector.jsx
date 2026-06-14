@@ -17,7 +17,7 @@ export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-slate-950/75 z-50 overflow-y-auto p-4 backdrop-blur-md flex flex-col items-center justify-start md:justify-center"
+          className="fixed inset-0 bg-slate-950/75 z-50 overflow-y-auto backdrop-blur-md flex flex-col items-center justify-start md:justify-center"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -30,13 +30,10 @@ export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards 
               <h2 className="text-white text-3xl font-black tracking-wider uppercase drop-shadow-lg">
                 Declare Trump (Rung)
               </h2>
-              <p className="text-slate-355 text-sm font-medium mt-1 opacity-90 drop-shadow-md">
-                Choose a suit based on your first 5 cards
-              </p>
             </div>
 
             {/* Display first 5 cards fanned out */}
-            <div className="relative w-full h-56 flex items-center justify-center mb-4">
+            <div className="relative w-full h-28 flex items-center justify-center mb-4">
               {first5Cards.length > 0 ? (
                 first5Cards.map((card, idx) => {
                   // Compute fan rotation and translations
@@ -56,7 +53,11 @@ export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards 
                       }}
                       className="hover:z-50 hover:scale-105 transition-all duration-200"
                     >
-                      <PlayingCard card={card} className="shadow-2xl" />
+                      <PlayingCard
+                        card={card}
+                        className="shadow-2xl"
+                        style={{ width: "clamp(68px, 8vw, 110px)", height: "clamp(102px, 12vw, 165px)" }}
+                      />
                     </motion.div>
                   );
                 })
@@ -66,7 +67,7 @@ export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards 
             </div>
 
             {/* Suit Selection Buttons (Follows default sorting: Diamond, Club, Heart, Spade) */}
-            <div className="grid grid-cols-4 gap-4 w-full px-4 max-w-sm">
+            <div className="mt-2 grid grid-cols-4 gap-4 w-full px-4 max-w-sm">
               {SUITS.map((suit, idx) => (
                 <motion.button
                   key={suit.key}
@@ -91,7 +92,7 @@ export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards 
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.7 }}
                 onClick={onLeave}
-                className="bg-red-700 hover:bg-red-800 active:scale-95 text-white font-black px-6 py-2.5 rounded-xl text-xs transition-all duration-200 uppercase tracking-wider shadow-lg border border-red-900/50 cursor-pointer"
+                className="bg-red-700 mt-4 hover:bg-red-800 active:scale-95 text-white font-black px-6 py-2.5 rounded-xl text-xs transition-all duration-200 uppercase tracking-wider shadow-lg border border-red-900/50 cursor-pointer"
               >
                 Leave Room
               </motion.button>

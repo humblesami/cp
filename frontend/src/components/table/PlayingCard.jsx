@@ -19,7 +19,6 @@ export default function PlayingCard({ card, faceDown = false, playable = false, 
     "rounded-lg border select-none flex-shrink-0 relative transition-shadow duration-300",
     isCustomSize ? "" : (small ? "w-20 h-28" : "w-32 h-48"),
     playable && "card-playable ring-4 ring-yellow-400/80 shadow-[0_0_15px_rgba(250,204,21,0.5)]",
-    !playable && !faceDown && "opacity-90",
     className
   );
 
