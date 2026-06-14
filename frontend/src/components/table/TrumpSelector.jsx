@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import PlayingCard from "./PlayingCard";
 
 const SUITS = [
-  { key: "S", symbol: "♠", name: "Spades", color: "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200" },
-  { key: "H", symbol: "♥", name: "Hearts", color: "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-100" },
-  { key: "D", symbol: "♦", name: "Diamonds", color: "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-100" },
-  { key: "C", symbol: "♣", name: "Clubs", color: "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200" },
+  { key: "D", symbol: "♦", name: "Diamonds" },
+  { key: "C", symbol: "♣", name: "Clubs" },
+  { key: "H", symbol: "♥", name: "Hearts" },
+  { key: "S", symbol: "♠", name: "Spades" },
 ];
 
 export default function TrumpSelector({ visible, onSelect, first5Cards = [] }) {
@@ -17,41 +17,70 @@ export default function TrumpSelector({ visible, onSelect, first5Cards = [] }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-950/75 flex flex-col items-center justify-center z-50 p-4 backdrop-blur-md"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-md border border-slate-200 shadow-2xl flex flex-col items-center"
+            className="w-full max-w-md flex flex-col items-center justify-center gap-8"
           >
-            <h2 className="text-slate-800 text-lg font-black text-center mb-0.5">Declare Trump (Rung)</h2>
-            <p className="text-slate-500 text-xs text-center mb-5 font-medium">Choose a suit based on your first 5 cards</p>
+            {/* Title / Header */}
+            <div className="text-center">
+              <h2 className="text-white text-3xl font-black tracking-wider uppercase drop-shadow-lg">
+                Declare Trump (Rung)
+              </h2>
+              <p className="text-slate-350 text-sm font-medium mt-1 opacity-90 drop-shadow-md">
+                Choose a suit based on your first 5 cards
+              </p>
+            </div>
 
-            {/* Display first 5 cards */}
-            <div className="flex justify-center mb-2 w-full overflow-x-auto py-2 px-1 rounded-xl border border-slate-100">
+            {/* Display first 5 cards fanned out */}
+            <div className="relative w-full h-56 flex items-center justify-center mb-4">
               {first5Cards.length > 0 ? (
-                first5Cards.map((card) => (
-                  <div key={card} className="scale-90 origin-bottom flex-shrink-0">
-                    <PlayingCard card={card} small />
-                  </div>
-                ))
+                first5Cards.map((card, idx) => {
+                  // Compute fan rotation and translations
+                  const angle = (idx - 2) * 12; // -24, -12, 0, 12, 24 degrees
+                  const translateX = (idx - 2) * 45; // -90, -45, 0, 45, 90 px
+                  const translateY = Math.abs(idx - 2) * 6; // 12, 6, 0, 6, 12 px
+                  return (
+                    <motion.div
+                      key={card}
+                      initial={{ opacity: 0, y: 50, rotate: 0 }}
+                      animate={{ opacity: 1, y: translateY, x: translateX, rotate: angle }}
+                      transition={{ type: "spring", stiffness: 120, damping: 15, delay: idx * 0.08 }}
+                      style={{
+                        position: "absolute",
+                        transformOrigin: "bottom center",
+                        zIndex: idx + 10,
+                      }}
+                      className="hover:z-50 hover:scale-105 transition-all duration-200"
+                    >
+                      <PlayingCard card={card} className="shadow-2xl" />
+                    </motion.div>
+                  );
+                })
               ) : (
-                <p className="text-slate-400 text-xs py-4">Loading your cards…</p>
+                <p className="text-slate-400 text-sm font-semibold">Loading your cards…</p>
               )}
             </div>
 
-            {/* Suit Selection Buttons */}
-            <div className="grid grid-cols-2 gap-3 w-full">
-              {SUITS.map((suit) => (
-                <button
+            {/* Suit Selection Buttons (Follows default sorting: Diamond, Club, Heart, Spade) */}
+            <div className="grid grid-cols-4 gap-4 w-full px-4 max-w-sm">
+              {SUITS.map((suit, idx) => (
+                <motion.button
                   key={suit.key}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.4 + idx * 0.05 }}
                   onClick={() => onSelect(suit.key)}
-                  className={`${suit.color} border rounded-xl py-3 text-center font-bold transition flex flex-col items-center shadow-sm`}
+                  className="aspect-square flex items-center justify-center rounded-2xl border-2 border-white bg-black/40 hover:bg-black/60 hover:scale-105 hover:shadow-[0_0_15px_rgba(255,255,255,0.4)] active:scale-95 text-white transition-all duration-200 shadow-xl cursor-pointer"
+                  title={suit.name}
                 >
-                  <div className="text-3xl mb-0.5">{suit.symbol}</div>
-                  <div className="text-xs">{suit.name}</div>
-                </button>
+                  <span className="text-5xl md:text-6xl select-none leading-none filter drop-shadow-md">
+                    {suit.symbol}
+                  </span>
+                </motion.button>
               ))}
             </div>
           </motion.div>
