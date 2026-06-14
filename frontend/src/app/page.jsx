@@ -11,7 +11,7 @@ export default function HomePage() {
     if (session) router.push("/lobby");
   }, [session, router]);
 
-  if (status === "loading") {
+  if (status === "loading" || session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-emerald-700 text-xl font-bold animate-pulse">Loading…</div>

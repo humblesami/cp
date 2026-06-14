@@ -3,23 +3,14 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
-export const useSocketStore = create((set, get) => ({
-  socket: null,
-  connected: false,
-
-  // Room state
+const DEFAULT_GAME_ROOM_STATE = {
   currentRoomId: null,
   roomPlayers: [],
   roomName: "",
   roomDescription: "",
   roomAdminId: null,
   roomIsPrivate: false,
-
-  // Lobby state
-  lobbyMessages: [],
-
-  // Game state (player's own view)
-  gamePhase: null,       // trump_selection | playing | hand_complete | match_over
+  gamePhase: null,
   yourSeat: null,
   yourHand: [],
   handSizes: [0, 0, 0, 0],
@@ -31,12 +22,19 @@ export const useSocketStore = create((set, get) => ({
   trickWinners: [],
   lastHandResult: null,
   trumpCallerSeat: null,
-
-  // UI state
-  lastPlayedCard: null,   // { seatIndex, card } for animation
+  lastPlayedCard: null,
   lastTrickWinner: null,
   chatMessages: [],
   notification: null,
+};
+
+export const useSocketStore = create((set, get) => ({
+  socket: null,
+  connected: false,
+  ...DEFAULT_GAME_ROOM_STATE,
+
+  // Lobby state
+  lobbyMessages: [],
 
   // ── Connect ────────────────────────────────────────────
   connect(token) {
@@ -178,29 +176,29 @@ export const useSocketStore = create((set, get) => ({
     set({ 
       socket: null, 
       connected: false,
-      currentRoomId: null,
-      roomPlayers: [],
-      roomName: "",
-      roomDescription: "",
-      roomAdminId: null,
+      ...DEFAULT_GAME_ROOM_STATE,
       lobbyMessages: [],
     });
   },
 
   // ── Actions (emit helpers) ──────────────────────────────
   createRoom(name, description = "", isPrivate = false) {
+    set(DEFAULT_GAME_ROOM_STATE);
     return emitWithAck(get().socket, "create_room", { name, description, isPrivate });
   },
 
   createSoloRoom() {
+    set(DEFAULT_GAME_ROOM_STATE);
     return emitWithAck(get().socket, "create_solo_room", {});
   },
 
   joinRoom(roomId) {
+    set(DEFAULT_GAME_ROOM_STATE);
     return emitWithAck(get().socket, "join_room", { roomId });
   },
 
   leaveRoom() {
+    set(DEFAULT_GAME_ROOM_STATE);
     return emitWithAck(get().socket, "leave_room", {});
   },
 

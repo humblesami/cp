@@ -96,6 +96,17 @@ export default function RoomPage() {
     }
   }
 
+  if (!connected || !joined) {
+    return (
+      <div className="h-screen w-screen bg-slate-50 flex flex-col items-center justify-center gap-4 text-slate-850">
+        <div className="w-12 h-12 rounded-full border-4 border-emerald-600 border-t-transparent animate-spin" />
+        <p className="text-sm font-bold tracking-wider animate-pulse text-emerald-700 uppercase">
+          Connecting to room…
+        </p>
+      </div>
+    );
+  }
+
   const filledSeats = Array.from({ length: 4 }, (_, i) => roomPlayers[i] || null);
   const playerCount = roomPlayers.filter(Boolean).length;
   const isChatActive = playerCount >= 2;

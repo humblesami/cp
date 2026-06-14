@@ -96,6 +96,17 @@ export default function GamePage() {
     right: yourSeat != null ? (yourSeat + 1) % 4 : 1,
   };
 
+  if (!connected || !joined) {
+    return (
+      <div className="h-screen w-screen bg-slate-950 flex flex-col items-center justify-center gap-4 text-white">
+        <div className="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" />
+        <p className="text-sm font-bold tracking-wider animate-pulse text-emerald-400 uppercase">
+          Loading Game Table…
+        </p>
+      </div>
+    );
+  }
+
   const trickCards = currentTrick?.cards ?? {};
 
   // Count uncollected tricks for Double Sir pile representation
