@@ -53,6 +53,7 @@ button[disabled] {
 
 .room-chat {
   position: fixed;
-  bottom: 26vh;
-  right: 10px;
+  bottom: 29vh;
+  right: 5px;
+  width: 28vw;
 }

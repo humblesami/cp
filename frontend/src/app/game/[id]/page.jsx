@@ -43,6 +43,7 @@ export default function GamePage() {
 
   const [joined, setJoined] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  const [showChat, setShowChat] = useState(false);
 
   // Re-join the room on mount / reconnection
   useEffect(() => {
@@ -96,15 +97,64 @@ export default function GamePage() {
     right: yourSeat != null ? (yourSeat + 1) % 4 : 1,
   };
 
+  const [lastPlayedCards, setLastPlayedCards] = useState({
+    top: null,
+    left: null,
+    right: null,
+    bottom: null,
+  });
+
+  // Clear last played cards on new hand or when leaving
+  useEffect(() => {
+    if (gamePhase === "trump_selection" || !joined) {
+      setLastPlayedCards({ top: null, left: null, right: null, bottom: null });
+    }
+  }, [gamePhase, joined]);
+
+  // Sync last played card indicators: persist them until the senior player starts the next turn
+  useEffect(() => {
+    if (!currentTrick) return;
+    const cards = currentTrick.cards ?? {};
+    const topSeat = relativeSeats.top;
+    const leftSeat = relativeSeats.left;
+    const rightSeat = relativeSeats.right;
+    const bottomSeat = relativeSeats.bottom;
+
+    const playedTop = cards[topSeat] || null;
+    const playedLeft = cards[leftSeat] || null;
+    const playedRight = cards[rightSeat] || null;
+    const playedBottom = cards[bottomSeat] || null;
+
+    const numPlayed = Object.values(cards).filter(Boolean).length;
+
+    if (numPlayed === 1) {
+      // Senior player has just started the new turn! Clear previous indicators and set new one.
+      setLastPlayedCards({
+        top: playedTop,
+        left: playedLeft,
+        right: playedRight,
+        bottom: playedBottom,
+      });
+    } else if (numPlayed > 1) {
+      // Keep other indicators and update the new plays
+      setLastPlayedCards((prev) => ({
+        top: playedTop || prev.top,
+        left: playedLeft || prev.left,
+        right: playedRight || prev.right,
+        bottom: playedBottom || prev.bottom,
+      }));
+    }
+  }, [currentTrick, relativeSeats.top, relativeSeats.left, relativeSeats.right, relativeSeats.bottom]);
+
   const [trickState, setTrickState] = useState({
-    cards: { top: null, left: null, right: null },
+    cards: { top: null, left: null, right: null, bottom: null },
     animatingTo: null,
   });
 
   // Sync played cards and handle reset for new tricks
   useEffect(() => {
     if (!currentTrick) {
-      setTrickState({ cards: { top: null, left: null, right: null }, animatingTo: null });
+      setTrickState({ cards: { top: null, left: null, right: null, bottom: null }, animatingTo: null });
       return;
     }
 
@@ -112,11 +162,13 @@ export default function GamePage() {
     const topSeat = relativeSeats.top;
     const leftSeat = relativeSeats.left;
     const rightSeat = relativeSeats.right;
+    const bottomSeat = relativeSeats.bottom;
 
     const newCards = {
       top: cards[topSeat] || null,
       left: cards[leftSeat] || null,
       right: cards[rightSeat] || null,
+      bottom: cards[bottomSeat] || null,
     };
 
     const hasCards = Object.values(newCards).some(Boolean);
@@ -134,7 +186,7 @@ export default function GamePage() {
         animatingTo: null,
       });
     }
-  }, [currentTrick, relativeSeats.top, relativeSeats.left, relativeSeats.right]);
+  }, [currentTrick, relativeSeats.top, relativeSeats.left, relativeSeats.right, relativeSeats.bottom]);
 
   // Handle trick won fly animation
   useEffect(() => {
@@ -153,7 +205,7 @@ export default function GamePage() {
 
         const timer = setTimeout(() => {
           setTrickState({
-            cards: { top: null, left: null, right: null },
+            cards: { top: null, left: null, right: null, bottom: null },
             animatingTo: null,
           });
         }, 1000);
@@ -185,8 +237,8 @@ export default function GamePage() {
       className="h-screen w-screen bg-cover bg-center flex flex-col overflow-hidden text-slate-805 relative select-none"
     >
       {/* Top Left ScoreCard (Ruled-paper Clipboard layout) */}
-      <div className="absolute top-4 left-4 z-40">
-        <ScoreCard score={score} trickWinners={trickWinners} />
+      <div className="absolute top-4 left-2 z-40">
+        <ScoreCard score={score} trickWinners={trickWinners} yourSeat={yourSeat} />
       </div>
 
       {/* Top Right Controls: Active Trump Card (Rung), Rules and Leave Button */}
@@ -250,7 +302,7 @@ export default function GamePage() {
       {/* Game Table Area (Center Center) */}
       <div className="flex-1 relative flex items-center justify-center p-6">
         {/* Symmetrical 3D-styled Felt Table */}
-        <div className="aspect-[1.6/1] w-[min(70vw,60vh)] md:w-[60%] max-w-[500px] md:max-w-[580px] relative flex items-center justify-center bg-gradient-to-br from-red-800 to-red-950 border-[12px] border-slate-900 rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.85),0_15px_35px_rgba(0,0,0,0.65)]">
+        <div className="aspect-[1.6/1] w-[min(76vw,68vh)] md:w-[68%] max-w-[600px] relative flex items-center justify-center bg-gradient-to-br from-red-800 to-red-950 border-[12px] border-slate-900 rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.85),0_15px_35px_rgba(0,0,0,0.65)] translate-y-8">
           {/* Gold inner ring separator */}
           <div className="absolute inset-1 border-2 border-amber-500/50 rounded-full pointer-events-none" />
 
@@ -264,25 +316,58 @@ export default function GamePage() {
           ))}
 
           {/* TOP player */}
-          <div className="absolute top-[-30px] md:top-[-45px] left-1/2 -translate-x-1/2 z-20">
+          <div className="absolute top-[-30px] md:top-[-45px] left-1/2 -translate-x-1/2 z-20 flex items-center">
             <PlayerSeat
               player={seats[relativeSeats.top]}
               isTurn={turn === relativeSeats.top}
               onAvatarClick={setSelectedPlayerId}
             />
+            {lastPlayedCards.top && (
+              <div 
+                className="z-30 flex-shrink-0" 
+                style={{ 
+                  position: "absolute", 
+                  width: "36px", 
+                  height: "60px", 
+                  bottom: "40px", 
+                  right: "64px" 
+                }}
+              >
+                <PlayingCard card={lastPlayedCards.top} style={{ width: 36, height: 60 }} />
+              </div>
+            )}
           </div>
 
           {/* LEFT player */}
-          <div className="absolute left-[-45px] md:left-[-65px] top-1/2 -translate-y-1/2 z-20">
+          <div className="absolute left-[-45px] md:left-[-65px] top-1/2 -translate-y-1/2 z-20 flex items-center">
             <PlayerSeat
               player={seats[relativeSeats.left]}
               isTurn={turn === relativeSeats.left}
               onAvatarClick={setSelectedPlayerId}
             />
+            {lastPlayedCards.left && (
+              <div className="ml-1 relative z-30 flex-shrink-0" style={{ width: "36px", height: "60px", transform: "translateY(15px)" }}>
+                <PlayingCard card={lastPlayedCards.left} style={{ width: 36, height: 60 }} />
+              </div>
+            )}
           </div>
 
           {/* RIGHT player */}
-          <div className="absolute right-[-45px] md:right-[-65px] top-1/2 -translate-y-1/2 z-20">
+          <div className="absolute right-[-45px] md:right-[-65px] top-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
+            {lastPlayedCards.right && (
+              <div 
+                className="z-30 flex-shrink-0" 
+                style={{ 
+                  position: "absolute", 
+                  width: "36px", 
+                  height: "60px", 
+                  right: "64px", 
+                  bottom: "20px" 
+                }}
+              >
+                <PlayingCard card={lastPlayedCards.right} style={{ width: 36, height: 60 }} />
+              </div>
+            )}
             <PlayerSeat
               player={seats[relativeSeats.right]}
               isTurn={turn === relativeSeats.right}
@@ -290,33 +375,53 @@ export default function GamePage() {
             />
           </div>
 
-          {/* Played Cards (Left, Right, Top) inside Table with fly animations */}
+          {/* Played Cards (Left, Right, Top, Bottom) inside Table with fly animations */}
           {trickState.cards.left && (
             <motion.div
               key="card-left"
               style={{
                 position: "absolute",
-                width: "50px",
-                height: "100px",
-                zIndex: 30,
+                width: "clamp(68px, 8vw, 110px)",
+                height: "clamp(102px, 12vw, 165px)",
+                zIndex: 15,
+              }}
+              initial={{
+                left: "0%",
+                top: "50%",
+                translateX: "-50%",
+                translateY: "-50%",
+                x: 0,
+                y: 0,
+                rotate: 0,
+                opacity: 0,
+                scale: 0.5,
               }}
               variants={{
-                played: { x: -85, y: 0, rotate: -5, opacity: 1, scale: 1 },
-                fly_top: { x: 0, y: -160, rotate: 10, scale: 0.1, opacity: 0 },
-                fly_left: { x: -220, y: 0, rotate: -30, scale: 0.1, opacity: 0 },
-                fly_right: { x: 220, y: 0, rotate: 30, scale: 0.1, opacity: 0 },
-                fly_bottom: { x: -280, y: 220, rotate: -45, scale: 0.1, opacity: 0 },
+                played: {
+                  left: "50%",
+                  top: "50%",
+                  translateX: "-50%",
+                  translateY: "-50%",
+                  x: -25,
+                  y: 0,
+                  rotate: -15,
+                  opacity: 1,
+                  scale: 1,
+                },
+                fly_top: { left: "50%", top: "0%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_left: { left: "0%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_right: { left: "100%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_bottom: { left: "50%", top: "100%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
               }}
-              initial="played"
               animate={
                 trickState.animatingTo === "top" ? "fly_top" :
                   trickState.animatingTo === "left" ? "fly_left" :
                     trickState.animatingTo === "right" ? "fly_right" :
                       trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
               }
-              transition={{ duration: 0.8, ease: "easeInOut" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <PlayingCard card={trickState.cards.left} style={{ width: 50, height: 100 }} />
+              <PlayingCard card={trickState.cards.left} faceDown={false} style={{ width: "100%", height: "100%" }} />
             </motion.div>
           )}
 
@@ -325,27 +430,47 @@ export default function GamePage() {
               key="card-right"
               style={{
                 position: "absolute",
-                width: "50px",
-                height: "100px",
-                zIndex: 30,
+                width: "clamp(68px, 8vw, 110px)",
+                height: "clamp(102px, 12vw, 165px)",
+                zIndex: 16,
+              }}
+              initial={{
+                left: "100%",
+                top: "50%",
+                translateX: "-50%",
+                translateY: "-50%",
+                x: 0,
+                y: 0,
+                rotate: 0,
+                opacity: 0,
+                scale: 0.5,
               }}
               variants={{
-                played: { x: 85, y: 0, rotate: 5, opacity: 1, scale: 1 },
-                fly_top: { x: 0, y: -160, rotate: -10, scale: 0.1, opacity: 0 },
-                fly_left: { x: -220, y: 0, rotate: -30, scale: 0.1, opacity: 0 },
-                fly_right: { x: 220, y: 0, rotate: 30, scale: 0.1, opacity: 0 },
-                fly_bottom: { x: -280, y: 220, rotate: -45, scale: 0.1, opacity: 0 },
+                played: {
+                  left: "50%",
+                  top: "50%",
+                  translateX: "-50%",
+                  translateY: "-50%",
+                  x: 25,
+                  y: 0,
+                  rotate: 15,
+                  opacity: 1,
+                  scale: 1,
+                },
+                fly_top: { left: "50%", top: "0%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_left: { left: "0%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_right: { left: "100%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_bottom: { left: "50%", top: "100%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
               }}
-              initial="played"
               animate={
                 trickState.animatingTo === "top" ? "fly_top" :
                   trickState.animatingTo === "left" ? "fly_left" :
                     trickState.animatingTo === "right" ? "fly_right" :
                       trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
               }
-              transition={{ duration: 0.8, ease: "easeInOut" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <PlayingCard card={trickState.cards.right} style={{ width: 50, height: 100 }} />
+              <PlayingCard card={trickState.cards.right} faceDown={false} style={{ width: "100%", height: "100%" }} />
             </motion.div>
           )}
 
@@ -354,27 +479,96 @@ export default function GamePage() {
               key="card-top"
               style={{
                 position: "absolute",
-                width: "50px",
-                height: "100px",
-                zIndex: 30,
+                width: "clamp(68px, 8vw, 110px)",
+                height: "clamp(102px, 12vw, 165px)",
+                zIndex: 17,
+              }}
+              initial={{
+                left: "50%",
+                top: "0%",
+                translateX: "-50%",
+                translateY: "-50%",
+                x: 0,
+                y: 0,
+                rotate: 0,
+                opacity: 0,
+                scale: 0.5,
               }}
               variants={{
-                played: { x: 0, y: -40, rotate: 0, opacity: 1, scale: 1 },
-                fly_top: { x: 0, y: -160, rotate: 0, scale: 0.1, opacity: 0 },
-                fly_left: { x: -220, y: 0, rotate: -30, scale: 0.1, opacity: 0 },
-                fly_right: { x: 220, y: 0, rotate: 30, scale: 0.1, opacity: 0 },
-                fly_bottom: { x: -280, y: 220, rotate: -45, scale: 0.1, opacity: 0 },
+                played: {
+                  left: "50%",
+                  top: "50%",
+                  translateX: "-50%",
+                  translateY: "-50%",
+                  x: 0,
+                  y: -25,
+                  rotate: 5,
+                  opacity: 1,
+                  scale: 1,
+                },
+                fly_top: { left: "50%", top: "0%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_left: { left: "0%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_right: { left: "100%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_bottom: { left: "50%", top: "100%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
               }}
-              initial="played"
               animate={
                 trickState.animatingTo === "top" ? "fly_top" :
                   trickState.animatingTo === "left" ? "fly_left" :
                     trickState.animatingTo === "right" ? "fly_right" :
                       trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
               }
-              transition={{ duration: 0.8, ease: "easeInOut" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <PlayingCard card={trickState.cards.top} style={{ width: 50, height: 100 }} />
+              <PlayingCard card={trickState.cards.top} faceDown={false} style={{ width: "100%", height: "100%" }} />
+            </motion.div>
+          )}
+
+          {trickState.cards.bottom && (
+            <motion.div
+              key="card-bottom"
+              style={{
+                position: "absolute",
+                width: "clamp(68px, 8vw, 110px)",
+                height: "clamp(102px, 12vw, 165px)",
+                zIndex: 18,
+              }}
+              initial={{
+                left: "50%",
+                top: "100%",
+                translateX: "-50%",
+                translateY: "-50%",
+                x: 0,
+                y: 0,
+                rotate: 0,
+                opacity: 0,
+                scale: 0.5,
+              }}
+              variants={{
+                played: {
+                  left: "50%",
+                  top: "50%",
+                  translateX: "-50%",
+                  translateY: "-50%",
+                  x: 0,
+                  y: 25,
+                  rotate: -5,
+                  opacity: 1,
+                  scale: 1,
+                },
+                fly_top: { left: "50%", top: "0%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_left: { left: "0%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_right: { left: "100%", top: "50%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+                fly_bottom: { left: "50%", top: "100%", translateX: "-50%", translateY: "-50%", x: 0, y: 0, scale: 0.1, opacity: 0 },
+              }}
+              animate={
+                trickState.animatingTo === "top" ? "fly_top" :
+                  trickState.animatingTo === "left" ? "fly_left" :
+                    trickState.animatingTo === "right" ? "fly_right" :
+                      trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
+              }
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            >
+              <PlayingCard card={trickState.cards.bottom} faceDown={false} style={{ width: "100%", height: "100%" }} />
             </motion.div>
           )}
 
@@ -410,13 +604,18 @@ export default function GamePage() {
       {/* MY HAND & CHATTER BOX (Bottom Section) */}
       <div className="h-28 md:h-36 flex-shrink-0 z-20 relative px-6 pb-2 md:pb-4 flex justify-center items-end pointer-events-auto">
         {/* Bottom Left: Sami's Avatar */}
-        <div className="absolute bottom-1 left-2 mb-1">
+        <div className="absolute bottom-1 left-2 mb-1 flex items-center gap-1.5">
           <PlayerSeat
             player={seats[relativeSeats.bottom]}
             isYou
             isTurn={isYourTurn}
             onAvatarClick={setSelectedPlayerId}
           />
+          {lastPlayedCards.bottom && (
+            <div className="relative z-30 flex-shrink-0" style={{ width: "36px", height: "60px" }}>
+              <PlayingCard card={lastPlayedCards.bottom} style={{ width: 36, height: 60 }} />
+            </div>
+          )}
         </div>
 
         {/* Fanned Cards (Centered) */}
@@ -435,9 +634,9 @@ export default function GamePage() {
                     transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
                     transformOrigin: "bottom center",
                     zIndex: idx + 10,
-                    marginLeft: idx === 0 ? 0 : "clamp(-48px, -3.2vw, -36px)",
+                    marginLeft: idx === 0 ? 0 : "clamp(-50px, -3.8vw, -36px)",
                   }}
-                  className="relative transition-all duration-300 hover:-translate-y-8 hover:z-50"
+                  className="relative game-card mine transition-all duration-300 hover:-translate-y-8 hover:z-50"
                 >
                   <PlayingCard
                     card={card}
@@ -445,8 +644,8 @@ export default function GamePage() {
                     onClick={() => handlePlayCard(card)}
                     className="shadow-2xl playing-card"
                     style={{
-                      width: "clamp(68px, 6vw, 90px)",
-                      height: "clamp(102px, 9vw, 135px)",
+                      width: "clamp(68px, 8vw, 110px)",
+                      height: "clamp(102px, 12vw, 165px)",
                     }}
                   />
                 </div>
@@ -460,9 +659,30 @@ export default function GamePage() {
         </div>
 
         {/* Bottom Right: Chatter Panel */}
-        <div className="w-56 md:w-72 h-[100px] room-chat md:h-[150px] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-30 mr-2">
-          <ChatPanel />
-        </div>
+        {showChat ? (
+          <div className="w-56 md:w-72 h-[180px] room-chat bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-30 mr-2">
+            {/* Toggle Header */}
+            <div className="bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 flex justify-between items-center border-b border-slate-700 select-none">
+              <span className="tracking-wider uppercase">Room Chat</span>
+              <button 
+                onClick={() => setShowChat(false)}
+                className="text-slate-400 hover:text-white font-extrabold cursor-pointer transition text-xs"
+              >
+                ✕ Hide
+              </button>
+            </div>
+            <ChatPanel />
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowChat(true)}
+            className="fixed bottom-[29vh] right-[5px] w-12 h-12 rounded-full bg-slate-900/95 border border-slate-700/80 text-white flex items-center justify-center shadow-2xl z-30 hover:scale-110 active:scale-95 transition-all text-xl cursor-pointer hover:bg-slate-800 animate-bounce"
+            style={{ animationDuration: '3s' }}
+            title="Open Room Chat"
+          >
+            💬
+          </button>
+        )}
       </div>
 
       {/* Trump selector overlay */}

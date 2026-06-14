@@ -1,65 +1,41 @@
 "use client";
 
-export default function ScoreCard({ score, trickWinners }) {
+export default function ScoreCard({ score, trickWinners, yourSeat = 0 }) {
   const tricksA = trickWinners?.filter((s) => s !== null && s !== undefined && s % 2 === 0).length ?? 0;
   const tricksB = trickWinners?.filter((s) => s !== null && s !== undefined && s % 2 !== 0).length ?? 0;
 
+  const isTeamA = yourSeat % 2 === 0;
+  const yourTricks = isTeamA ? tricksA : tricksB;
+  const otherTricks = isTeamA ? tricksB : tricksA;
+  const yourMatches = isTeamA ? (score?.A ?? 0) : (score?.B ?? 0);
+  const otherMatches = isTeamA ? (score?.B ?? 0) : (score?.A ?? 0);
+
   return (
-    <div className="w-52 bg-amber-50 rounded-2xl border-4 border-amber-900/45 shadow-2xl overflow-hidden relative font-sans text-slate-800">
-      {/* Clipboard Header Banner */}
-      <div className="bg-red-800 text-white text-center py-1.5 font-black text-xs uppercase tracking-wider shadow-inner border-b border-amber-900/30">
-        ScoreCard
+    <div className="w-[150px] bg-slate-900/90 border border-slate-700/80 rounded-xl overflow-hidden shadow-xl text-white font-sans text-xs">
+      <div className="bg-slate-800 px-2 py-1 text-center font-extrabold uppercase text-[10px] tracking-wider border-b border-slate-700">
+        Scorecard
       </div>
-
-      {/* Ruled Paper Content Area */}
-      <div 
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px)",
-          backgroundSize: "100% 24px"
-        }}
-        className="p-3 bg-yellow-50/70 flex flex-col gap-2.5 relative"
-      >
-        {/* Notebook header lines */}
-        <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-500 uppercase px-1">
-          <span>Current:</span>
-          <span className="mr-4">Overall:</span>
-        </div>
-
-        {/* Team A (Yellow/Gold) Row */}
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-bold text-amber-800">Team A</span>
-          <div className="flex gap-4 items-center">
-            {/* Current Tricks score */}
-            <div className="w-7 h-7 bg-amber-400 border-2 border-amber-500 rounded flex items-center justify-center font-black text-sm text-slate-900 shadow-sm">
-              {tricksA}
-            </div>
-            {/* Overall match points score */}
-            <div className="w-7 h-7 bg-amber-500 border-2 border-amber-600 rounded flex items-center justify-center font-black text-sm text-slate-900 shadow-sm mr-2">
-              {score?.A ?? 0}
-            </div>
-          </div>
-        </div>
-
-        {/* Team B (Blue) Row */}
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-bold text-blue-800">Team B</span>
-          <div className="flex gap-4 items-center">
-            {/* Current Tricks score */}
-            <div className="w-7 h-7 bg-blue-500 border-2 border-blue-600 rounded flex items-center justify-center font-black text-sm text-white shadow-sm">
-              {tricksB}
-            </div>
-            {/* Overall match points score */}
-            <div className="w-7 h-7 bg-blue-700 border-2 border-blue-800 rounded flex items-center justify-center font-black text-sm text-white shadow-sm mr-2">
-              {score?.B ?? 0}
-            </div>
-          </div>
-        </div>
-
-        {/* Subtext */}
-        <div className="text-[9px] text-slate-500 text-center font-bold italic mt-0.5 border-t border-slate-200/50 pt-1.5">
-          First to 7 match points wins
-        </div>
-      </div>
+      <table className="w-full text-center border-collapse">
+        <thead>
+          <tr className="bg-slate-800/50 text-[9px] font-bold text-slate-400 uppercase border-b border-slate-700/50">
+            <th className="py-1 px-1.5 text-left">Team</th>
+            <th className="py-1 px-1.5">Your</th>
+            <th className="py-1 px-1.5">Other</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="border-b border-slate-700/30">
+            <td className="py-1 px-1.5 text-left text-slate-300 font-medium">Tricks</td>
+            <td className="py-1 px-1.5 font-bold text-emerald-400">{yourTricks}</td>
+            <td className="py-1 px-1.5 font-bold text-slate-300">{otherTricks}</td>
+          </tr>
+          <tr>
+            <td className="py-1 px-1.5 text-left text-slate-300 font-medium">Matches</td>
+            <td className="py-1 px-1.5 font-bold text-amber-400">{yourMatches}</td>
+            <td className="py-1 px-1.5 font-bold text-slate-300">{otherMatches}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

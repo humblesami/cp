@@ -23,7 +23,7 @@ export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-md flex flex-col items-center justify-center gap-8 my-8 md:my-0"
+            className="w-full max-w-md flex flex-col items-center justify-center my-8 md:my-0"
           >
             {/* Title / Header */}
             <div className="text-center">
