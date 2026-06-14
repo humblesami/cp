@@ -30,7 +30,7 @@ export default function PlayerStatsModal({ userId, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 overflow-y-auto p-4 bg-black/70 backdrop-blur-sm flex justify-center items-start md:items-center">
         {/* Backdrop click close */}
         <div className="absolute inset-0" onClick={onClose} />
 
@@ -39,13 +39,20 @@ export default function PlayerStatsModal({ userId, onClose }) {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl z-10 flex flex-col"
+          className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl z-10 flex flex-col my-8 md:my-0"
         >
           {/* Header Banner */}
-          <div className="bg-gradient-to-r from-red-800 to-rose-950 px-6 py-3 border-b border-red-700 flex justify-center items-center shadow-lg">
-            <h2 className="text-white text-xl font-bold tracking-widest text-center uppercase">
+          <div className="bg-gradient-to-r from-red-800 to-rose-950 px-6 py-3 border-b border-red-700 flex justify-center items-center shadow-lg relative">
+            <h2 className="text-white text-xl font-bold tracking-widest text-center uppercase w-full">
               User Profile
             </h2>
+            <button 
+              onClick={onClose}
+              className="absolute right-4 text-slate-300 hover:text-white text-xl font-bold transition cursor-pointer"
+              title="Close"
+            >
+              ✕
+            </button>
           </div>
 
           <div className="p-6 md:p-8 flex flex-col gap-6">

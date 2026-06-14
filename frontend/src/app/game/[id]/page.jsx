@@ -38,7 +38,7 @@ export default function GamePage() {
     trump, turn, score, seats, trickWinners, lastHandResult,
     trumpCallerSeat, notification, clearNotification,
     declareTrump, playCard, continueGame, leaveRoom,
-    connected, joinRoom,
+    connected, joinRoom, lastTrickWinner,
   } = useSocketStore();
 
   const [joined, setJoined] = useState(false);
@@ -95,6 +95,73 @@ export default function GamePage() {
     left: yourSeat != null ? (yourSeat + 3) % 4 : 3,
     right: yourSeat != null ? (yourSeat + 1) % 4 : 1,
   };
+
+  const [trickState, setTrickState] = useState({
+    cards: { top: null, left: null, right: null },
+    animatingTo: null,
+  });
+
+  // Sync played cards and handle reset for new tricks
+  useEffect(() => {
+    if (!currentTrick) {
+      setTrickState({ cards: { top: null, left: null, right: null }, animatingTo: null });
+      return;
+    }
+
+    const cards = currentTrick.cards ?? {};
+    const topSeat = relativeSeats.top;
+    const leftSeat = relativeSeats.left;
+    const rightSeat = relativeSeats.right;
+
+    const newCards = {
+      top: cards[topSeat] || null,
+      left: cards[leftSeat] || null,
+      right: cards[rightSeat] || null,
+    };
+
+    const hasCards = Object.values(newCards).some(Boolean);
+
+    if (trickState.animatingTo && hasCards) {
+      // New card played while animating -> immediately cancel animation and show new cards
+      setTrickState({
+        cards: newCards,
+        animatingTo: null,
+      });
+    } else if (!trickState.animatingTo) {
+      // Normal update
+      setTrickState({
+        cards: newCards,
+        animatingTo: null,
+      });
+    }
+  }, [currentTrick, relativeSeats.top, relativeSeats.left, relativeSeats.right]);
+
+  // Handle trick won fly animation
+  useEffect(() => {
+    if (lastTrickWinner !== null && lastTrickWinner !== undefined) {
+      let animPos = null;
+      if (lastTrickWinner === relativeSeats.top) animPos = "top";
+      else if (lastTrickWinner === relativeSeats.left) animPos = "left";
+      else if (lastTrickWinner === relativeSeats.right) animPos = "right";
+      else if (lastTrickWinner === relativeSeats.bottom) animPos = "bottom";
+
+      if (animPos) {
+        setTrickState((prev) => ({
+          ...prev,
+          animatingTo: animPos,
+        }));
+
+        const timer = setTimeout(() => {
+          setTrickState({
+            cards: { top: null, left: null, right: null },
+            animatingTo: null,
+          });
+        }, 1000);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [lastTrickWinner, relativeSeats.top, relativeSeats.left, relativeSeats.right, relativeSeats.bottom]);
 
   if (!connected || !joined) {
     return (
@@ -183,9 +250,9 @@ export default function GamePage() {
       {/* Game Table Area (Center Center) */}
       <div className="flex-1 relative flex items-center justify-center p-6">
         {/* Symmetrical 3D-styled Felt Table */}
-        <div className="aspect-square w-[55%] max-w-[340px] md:max-w-[380px] relative flex items-center justify-center bg-gradient-to-br from-red-800 to-red-950 border-[16px] border-slate-900 rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.85),0_15px_35px_rgba(0,0,0,0.65)]">
+        <div className="aspect-[1.6/1] w-[min(70vw,60vh)] md:w-[60%] max-w-[500px] md:max-w-[580px] relative flex items-center justify-center bg-gradient-to-br from-red-800 to-red-950 border-[12px] border-slate-900 rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.85),0_15px_35px_rgba(0,0,0,0.65)]">
           {/* Gold inner ring separator */}
-          <div className="absolute inset-1.5 border-2 border-amber-500/50 rounded-full pointer-events-none" />
+          <div className="absolute inset-1 border-2 border-amber-500/50 rounded-full pointer-events-none" />
 
           {/* Gold rivets around the charcoal border */}
           {RIVETS.map((rivet, idx) => (
@@ -197,43 +264,119 @@ export default function GamePage() {
           ))}
 
           {/* TOP player */}
-          <div className="absolute top-[-26%] left-1/2 -translate-x-1/2 z-20">
+          <div className="absolute top-[-30px] md:top-[-45px] left-1/2 -translate-x-1/2 z-20">
             <PlayerSeat
-              seat={relativeSeats.top}
               player={seats[relativeSeats.top]}
-              cardCount={handSizes[relativeSeats.top]}
               isTurn={turn === relativeSeats.top}
-              trickCard={trickCards[relativeSeats.top]}
-              position="top"
               onAvatarClick={setSelectedPlayerId}
             />
           </div>
 
           {/* LEFT player */}
-          <div className="absolute left-[-26%] top-1/2 -translate-y-1/2 z-20">
+          <div className="absolute left-[-45px] md:left-[-65px] top-1/2 -translate-y-1/2 z-20">
             <PlayerSeat
-              seat={relativeSeats.left}
               player={seats[relativeSeats.left]}
-              cardCount={handSizes[relativeSeats.left]}
               isTurn={turn === relativeSeats.left}
-              trickCard={trickCards[relativeSeats.left]}
-              position="left"
               onAvatarClick={setSelectedPlayerId}
             />
           </div>
 
           {/* RIGHT player */}
-          <div className="absolute right-[-26%] top-1/2 -translate-y-1/2 z-20">
+          <div className="absolute right-[-45px] md:right-[-65px] top-1/2 -translate-y-1/2 z-20">
             <PlayerSeat
-              seat={relativeSeats.right}
               player={seats[relativeSeats.right]}
-              cardCount={handSizes[relativeSeats.right]}
               isTurn={turn === relativeSeats.right}
-              trickCard={trickCards[relativeSeats.right]}
-              position="right"
               onAvatarClick={setSelectedPlayerId}
             />
           </div>
+
+          {/* Played Cards (Left, Right, Top) inside Table with fly animations */}
+          {trickState.cards.left && (
+            <motion.div
+              key="card-left"
+              style={{
+                position: "absolute",
+                width: "50px",
+                height: "100px",
+                zIndex: 30,
+              }}
+              variants={{
+                played: { x: -85, y: 0, rotate: -5, opacity: 1, scale: 1 },
+                fly_top: { x: 0, y: -160, rotate: 10, scale: 0.1, opacity: 0 },
+                fly_left: { x: -220, y: 0, rotate: -30, scale: 0.1, opacity: 0 },
+                fly_right: { x: 220, y: 0, rotate: 30, scale: 0.1, opacity: 0 },
+                fly_bottom: { x: -280, y: 220, rotate: -45, scale: 0.1, opacity: 0 },
+              }}
+              initial="played"
+              animate={
+                trickState.animatingTo === "top" ? "fly_top" :
+                trickState.animatingTo === "left" ? "fly_left" :
+                trickState.animatingTo === "right" ? "fly_right" :
+                trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
+              }
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+            >
+              <PlayingCard card={trickState.cards.left} style={{ width: 50, height: 100 }} />
+            </motion.div>
+          )}
+
+          {trickState.cards.right && (
+            <motion.div
+              key="card-right"
+              style={{
+                position: "absolute",
+                width: "50px",
+                height: "100px",
+                zIndex: 30,
+              }}
+              variants={{
+                played: { x: 85, y: 0, rotate: 5, opacity: 1, scale: 1 },
+                fly_top: { x: 0, y: -160, rotate: -10, scale: 0.1, opacity: 0 },
+                fly_left: { x: -220, y: 0, rotate: -30, scale: 0.1, opacity: 0 },
+                fly_right: { x: 220, y: 0, rotate: 30, scale: 0.1, opacity: 0 },
+                fly_bottom: { x: -280, y: 220, rotate: -45, scale: 0.1, opacity: 0 },
+              }}
+              initial="played"
+              animate={
+                trickState.animatingTo === "top" ? "fly_top" :
+                trickState.animatingTo === "left" ? "fly_left" :
+                trickState.animatingTo === "right" ? "fly_right" :
+                trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
+              }
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+            >
+              <PlayingCard card={trickState.cards.right} style={{ width: 50, height: 100 }} />
+            </motion.div>
+          )}
+
+          {trickState.cards.top && (
+            <motion.div
+              key="card-top"
+              style={{
+                position: "absolute",
+                width: "50px",
+                height: "100px",
+                zIndex: 30,
+              }}
+              variants={{
+                played: { x: 0, y: -40, rotate: 0, opacity: 1, scale: 1 },
+                fly_top: { x: 0, y: -160, rotate: 0, scale: 0.1, opacity: 0 },
+                fly_left: { x: -220, y: 0, rotate: -30, scale: 0.1, opacity: 0 },
+                fly_right: { x: 220, y: 0, rotate: 30, scale: 0.1, opacity: 0 },
+                fly_bottom: { x: -280, y: 220, rotate: -45, scale: 0.1, opacity: 0 },
+              }}
+              initial="played"
+              animate={
+                trickState.animatingTo === "top" ? "fly_top" :
+                trickState.animatingTo === "left" ? "fly_left" :
+                trickState.animatingTo === "right" ? "fly_right" :
+                trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
+              }
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+            >
+              <PlayingCard card={trickState.cards.top} style={{ width: 50, height: 100 }} />
+            </motion.div>
+          )}
 
           {/* Double Sir Uncollected Card Pile (Rotated stack) */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
@@ -265,23 +408,20 @@ export default function GamePage() {
       </div>
 
       {/* MY HAND & CHATTER BOX (Bottom Section) */}
-      <div className="h-40 flex-shrink-0 z-20 relative px-6 pb-4 flex justify-between items-end pointer-events-auto">
+      <div className="h-28 md:h-36 flex-shrink-0 z-20 relative px-6 pb-2 md:pb-4 flex justify-between items-end pointer-events-auto">
         {/* Bottom Left: Sami's Avatar and Hand Area */}
         <div className="flex items-end gap-6">
           <div className="mb-2">
             <PlayerSeat
-              seat={relativeSeats.bottom}
               player={seats[relativeSeats.bottom]}
               isYou
               isTurn={isYourTurn}
-              trickCard={trickCards[relativeSeats.bottom]}
-              position="bottom"
               onAvatarClick={setSelectedPlayerId}
             />
           </div>
 
           {/* Fanned Cards */}
-          <div className="flex items-end pb-3 relative perspective-1000">
+          <div className="flex items-end pb-1.5 md:pb-3 relative perspective-1000">
             {yourHand?.length > 0 ? (
               yourHand.map((card, idx) => {
                 const n = yourHand.length;
@@ -296,7 +436,7 @@ export default function GamePage() {
                       transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
                       transformOrigin: "bottom center",
                       zIndex: idx + 10,
-                      marginLeft: idx === 0 ? 0 : "-70px",
+                      marginLeft: idx === 0 ? 0 : "min(-4.5vw, -50px)",
                     }}
                     className="relative transition-all duration-300 hover:-translate-y-8 hover:z-50"
                   >
@@ -305,6 +445,10 @@ export default function GamePage() {
                       playable={isYourTurn && gamePhase === "playing"}
                       onClick={() => handlePlayCard(card)}
                       className="shadow-2xl"
+                      style={{
+                        width: "min(7vw, 90px)",
+                        height: "min(10.5vw, 135px)",
+                      }}
                     />
                   </div>
                 );
@@ -318,7 +462,7 @@ export default function GamePage() {
         </div>
 
         {/* Bottom Right: Chatter Panel */}
-        <div className="w-72 h-[150px] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-30 mr-2">
+        <div className="w-56 md:w-72 h-[100px] md:h-[150px] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-30 mr-2">
           <ChatPanel />
         </div>
       </div>

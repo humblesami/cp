@@ -18,13 +18,13 @@ export default function HandCompleteModal({ visible, result, score, onContinue, 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/75 z-50 overflow-y-auto p-4 flex justify-center items-start md:items-center"
         >
           <motion.div
             initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.85, opacity: 0 }}
-            className="bg-slate-800 rounded-2xl p-7 w-full max-w-sm border border-slate-600 text-center shadow-2xl"
+            className="bg-slate-800 rounded-2xl p-7 w-full max-w-sm border border-slate-600 text-center shadow-2xl my-8 md:my-0"
           >
             <p className="text-3xl mb-2">{isCourt ? "🏆" : isCoat ? "⚡" : "🃏"}</p>
             <h2 className="text-white text-xl font-bold mb-1">{headline}</h2>

@@ -17,13 +17,13 @@ export default function TrumpSelector({ visible, onSelect, onLeave, first5Cards 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-slate-950/75 flex flex-col items-center justify-center z-50 p-4 backdrop-blur-md"
+          className="fixed inset-0 bg-slate-950/75 z-50 overflow-y-auto p-4 backdrop-blur-md flex flex-col items-center justify-start md:justify-center"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-md flex flex-col items-center justify-center gap-8"
+            className="w-full max-w-md flex flex-col items-center justify-center gap-8 my-8 md:my-0"
           >
             {/* Title / Header */}
             <div className="text-center">

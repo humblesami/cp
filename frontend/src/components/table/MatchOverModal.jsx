@@ -15,13 +15,13 @@ export default function MatchOverModal({ visible, score, yourSeat }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/85 z-50 overflow-y-auto p-4 flex justify-center items-start md:items-center"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-slate-800 rounded-2xl p-8 w-full max-w-sm border border-slate-600 text-center shadow-2xl"
+            className="bg-slate-800 rounded-2xl p-8 w-full max-w-sm border border-slate-600 text-center shadow-2xl my-8 md:my-0"
           >
             <p className="text-5xl mb-3">{youWon ? "🏆" : "💀"}</p>
             <h2 className={`text-2xl font-bold mb-1 ${youWon ? "text-yellow-400" : "text-slate-400"}`}>
