@@ -3,7 +3,8 @@ const {
   getRoom, 
   joinRoom, 
   leaveRoom, 
-  findAdminRoomsByUserId 
+  findAdminRoomsByUserId,
+  createSoloRoom
 } = require("../src/redis/rooms");
 const { getRedis } = require("../src/redis/client");
 
@@ -36,6 +37,9 @@ jest.mock("../src/redis/client", () => {
       }
       store[key] = String(value);
       return "OK";
+    }),
+    get: jest.fn(async (key) => {
+      return store[key];
     }),
     clearStore: () => {
       for (const key of Object.keys(store)) {
@@ -122,5 +126,21 @@ describe("Room management and admin transfer", () => {
     const adminRooms2 = await findAdminRoomsByUserId(2);
     expect(adminRooms2).toHaveLength(1);
     expect(adminRooms2[0].id).toBe(roomId);
+  });
+
+  test("leaving a solo room (all other seats are bots) deletes the room and game state", async () => {
+    const roomId = await createSoloRoom(1, "User1");
+
+    const redis = getRedis();
+    await redis.set(`game:${roomId}`, JSON.stringify({ phase: "playing" }));
+
+    const result = await leaveRoom(roomId, 1, true);
+    expect(result.deleted).toBe(true);
+
+    const room = await getRoom(roomId);
+    expect(room).toBeNull();
+
+    const gameState = await redis.get(`game:${roomId}`);
+    expect(gameState).toBeUndefined();
   });
 });

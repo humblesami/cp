@@ -310,56 +310,7 @@ function registerRoomHandlers(io, socket) {
     socket.leave("lobby");
 
     if (socket.currentRoomId) {
-      const roomId = socket.currentRoomId;
-      
-      if (roomId.startsWith("SOLO-")) {
-        const { deleteGameState } = require("../redis/gameState");
-        const { deleteRoom } = require("../redis/rooms");
-        await deleteGameState(roomId);
-        await deleteRoom(roomId);
-        console.log(`[Disconnect] Instantly cleaned up solo room and game ${roomId}`);
-        return;
-      }
-
-      await markDisconnected(roomId, user.id);
-      io.to(roomId).emit("player_disconnected", { userId: user.id, username: user.username, reconnectWindowMs: BOT_SUBSTITUTION_DELAY_MS });
-
-      // Start bot substitution timer
-      const timerKey = `${roomId}:${user.id}`;
-      const timer = setTimeout(async () => {
-        disconnectTimers.delete(timerKey);
-        const gameState = await getGameState(roomId);
-        if (!gameState) return;
-
-        // Mark their seat as bot
-        const seat = gameState.seats.findIndex((s) => s && s.userId === user.id);
-        if (seat >= 0) {
-          gameState.seats[seat].isBot = true;
-          await saveGameState(roomId, gameState);
-          io.to(roomId).emit("bot_substituted", { seat, username: user.username });
-
-          // Trigger bot action if it was this player's turn
-          const { triggerBotPlay, triggerBotTrump } = require("./gameHandlers");
-          if (gameState.phase === "trump_selection" && gameState.trumpCallerSeat === seat) {
-            setTimeout(() => triggerBotTrump(io, roomId, gameState, seat), 1200);
-          } else if (gameState.phase === "playing" && gameState.turn === seat) {
-            setTimeout(() => triggerBotPlay(io, roomId, gameState, seat), 1200);
-          }
-        }
-      }, BOT_SUBSTITUTION_DELAY_MS);
-
-      disconnectTimers.set(timerKey, timer);
-    }
-
-    // Admin clean-up when disconnected from website
-    const adminRooms = await findAdminRoomsByUserId(user.id);
-    for (const r of adminRooms) {
-      const seats = Object.values(r.seats);
-      const playerCount = seats.filter(Boolean).length;
-      if (playerCount === 0) {
-        await deleteRoom(r.id);
-        io.to(r.id).emit("room_closed", { reason: "admin_disconnected" });
-      }
+      await handleLeave(io, socket, "disconnected");
     }
   });
 }

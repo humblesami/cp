@@ -120,10 +120,11 @@ async function leaveRoom(roomId, userId, isAdminConnected = true) {
     }
   }
 
-  const playerCount = Object.values(seats).filter(Boolean).length;
+  const humanCount = Object.values(seats).filter((s) => s && !s.isBot).length;
   
-  if (playerCount === 0) {
+  if (humanCount === 0) {
     await redis.del(roomKey(roomId));
+    await redis.del(`game:${roomId}`);
     return { deleted: true };
   }
 
@@ -147,7 +148,11 @@ async function leaveRoom(roomId, userId, isAdminConnected = true) {
     updates.createdBy = String(newAdminId);
   }
 
+  // Since a player left, abort any active game state
+  await redis.del(`game:${roomId}`);
+
   await redis.hSet(roomKey(roomId), updates);
+  const playerCount = Object.values(seats).filter(Boolean).length;
   return { deleted: false, playerCount, newAdminId, newAdminUsername };
 }
 
