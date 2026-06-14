@@ -406,6 +406,16 @@ async function handleLeave(io, socket, reason) {
     io.to(roomId).emit("room_closed", { reason: "last_player_left" });
   } else {
     io.to(roomId).emit("player_left", { userId: socket.user.id, username: socket.user.username, reason });
+    if (result?.newAdminId) {
+      const updatedRoom = await getRoom(roomId);
+      io.to(roomId).emit("room_updated", { room: updatedRoom });
+      io.to(roomId).emit("chat_message", {
+        userId: "system",
+        username: "System",
+        message: `${result.newAdminUsername} is now the table admin.`,
+        timestamp: Date.now(),
+      });
+    }
   }
 }
 

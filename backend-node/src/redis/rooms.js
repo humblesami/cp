@@ -114,7 +114,7 @@ async function leaveRoom(roomId, userId, isAdminConnected = true) {
 
   const seats = JSON.parse(data.seats);
   for (const [idx, seat] of Object.entries(seats)) {
-    if (seat && seat.userId === userId) {
+    if (seat && String(seat.userId) === String(userId)) {
       seats[idx] = null;
       break;
     }
@@ -122,14 +122,33 @@ async function leaveRoom(roomId, userId, isAdminConnected = true) {
 
   const playerCount = Object.values(seats).filter(Boolean).length;
   
-  // Room should only be deleted if empty AND the admin is disconnected from the website
-  if (playerCount === 0 && !isAdminConnected) {
+  if (playerCount === 0) {
     await redis.del(roomKey(roomId));
     return { deleted: true };
   }
 
-  await redis.hSet(roomKey(roomId), { seats: JSON.stringify(seats), status: "waiting" });
-  return { deleted: false, playerCount };
+  const isCreatorLeaving = String(data.createdBy) === String(userId);
+  let newAdminId = null;
+  let newAdminUsername = null;
+
+  if (isCreatorLeaving) {
+    let nextAdmin = Object.values(seats).find((s) => s && !s.isBot);
+    if (!nextAdmin) {
+      nextAdmin = Object.values(seats).find((s) => s !== null);
+    }
+    if (nextAdmin) {
+      newAdminId = nextAdmin.userId;
+      newAdminUsername = nextAdmin.username;
+    }
+  }
+
+  const updates = { seats: JSON.stringify(seats), status: "waiting" };
+  if (newAdminId !== null) {
+    updates.createdBy = String(newAdminId);
+  }
+
+  await redis.hSet(roomKey(roomId), updates);
+  return { deleted: false, playerCount, newAdminId, newAdminUsername };
 }
 
 async function markDisconnected(roomId, userId) {
