@@ -52,7 +52,7 @@ export default function PlayingCard({ card, faceDown = false, playable = false, 
       style={style}
     >
       {/* Top Left Corner - Rank */}
-      <div className={clsx("absolute font-black leading-none", is50x100 ? "left-1 top-1" : "left-2.5 top-2.5", suitColor)}>
+      <div className={clsx("absolute font-black leading-none", is50x100 ? "left-1 top-1" : "left-1 top-1", suitColor)}>
         <span className={clsx(is50x100 ? "text-base" : (small ? "text-2xl" : "text-4xl"))}>{rank}</span>
       </div>
 
@@ -64,7 +64,7 @@ export default function PlayingCard({ card, faceDown = false, playable = false, 
       </div>
 
       {/* Bottom Right Corner - Symmetrical Rank */}
-      <div className={clsx("absolute font-black leading-none rotate-180", is50x100 ? "right-1 bottom-1" : "right-2.5 bottom-2.5", suitColor)}>
+      <div className={clsx("absolute font-black leading-none rotate-180", is50x100 ? "right-1 bottom-1" : "right-1 bottom-1", suitColor)}>
         <span className={clsx(is50x100 ? "text-base" : (small ? "text-2xl" : "text-4xl"))}>{rank}</span>
       </div>
     </motion.div>

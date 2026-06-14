@@ -190,7 +190,14 @@ export default function GamePage() {
       </div>
 
       {/* Top Right Controls: Active Trump Card (Rung), Rules and Leave Button */}
-      <div className="absolute top-4 right-4 z-40 flex items-center gap-4">
+      <div className="absolute top-4 right-4 z-40 items-center gap-4">
+        {/* Leave Table Button */}
+        <button
+          onClick={handleQuit}
+          className="bg-red-700 hover:bg-red-800 text-white font-black px-4 py-2.5 rounded-xl text-xs transition uppercase tracking-wider shadow-lg border border-red-900/50"
+        >
+          Leave Room
+        </button>
         {/* Rules Checked Badges */}
         <div className="hidden md:flex items-center gap-2 bg-slate-900/85 border border-slate-700/80 rounded-xl px-3 py-2 text-[10px] text-slate-300 font-extrabold shadow tracking-wide uppercase">
           <div className="flex items-center gap-1.5">
@@ -204,33 +211,26 @@ export default function GamePage() {
 
         {/* Trump (Rung) Card widget */}
         {trump && (
-          <div className="bg-white border-2 border-amber-900/40 rounded-xl p-1.5 shadow-2xl text-center flex flex-col items-center w-16 relative">
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Rung</span>
-            <div className={clsx(
-              "text-2xl font-bold leading-none select-none",
-              (trump === "H" || trump === "D") ? "text-red-650" : "text-slate-800"
-            )}>
-              {trump === "S" && "♠"}
-              {trump === "H" && "♥"}
-              {trump === "D" && "♦"}
-              {trump === "C" && "♣"}
-            </div>
-            <span className="text-[7px] font-black text-slate-500 mt-1 uppercase tracking-wider">
-              {trump === "S" && "Spades"}
-              {trump === "H" && "Hearts"}
-              {trump === "D" && "Diamonds"}
-              {trump === "C" && "Clubs"}
+          <div className="bg-white border-2 border-amber-900/40 rounded-xl flex p-1.5 shadow-2xl text-center flex flex-col items-center w-16 relative"
+            style={{ width: 'auto' }}>
+            <span className="text-[12px] border-b-2 border-amber-900/40 font-black text-slate-400 uppercase tracking-widest leading-none">
+              Rung
             </span>
+            <div style={{ 'display': 'flex', 'flex-direction': 'row' }}>
+              <div className={clsx(
+                "text-4xl font-bold leading-none select-none",
+                (trump === "H" || trump === "D") ? "text-red-800" : "text-slate-800"
+              )}>
+                {trump === "S" && "♠"}
+                {trump === "H" && "♥"}
+                {trump === "D" && "♦"}
+                {trump === "C" && "♣"}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Leave Table Button */}
-        <button
-          onClick={handleQuit}
-          className="bg-red-700 hover:bg-red-800 text-white font-black px-4 py-2.5 rounded-xl text-xs transition uppercase tracking-wider shadow-lg border border-red-900/50"
-        >
-          Leave Room
-        </button>
+
       </div>
 
       {/* Notification Toast */}
@@ -310,9 +310,9 @@ export default function GamePage() {
               initial="played"
               animate={
                 trickState.animatingTo === "top" ? "fly_top" :
-                trickState.animatingTo === "left" ? "fly_left" :
-                trickState.animatingTo === "right" ? "fly_right" :
-                trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
+                  trickState.animatingTo === "left" ? "fly_left" :
+                    trickState.animatingTo === "right" ? "fly_right" :
+                      trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
               }
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
@@ -339,9 +339,9 @@ export default function GamePage() {
               initial="played"
               animate={
                 trickState.animatingTo === "top" ? "fly_top" :
-                trickState.animatingTo === "left" ? "fly_left" :
-                trickState.animatingTo === "right" ? "fly_right" :
-                trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
+                  trickState.animatingTo === "left" ? "fly_left" :
+                    trickState.animatingTo === "right" ? "fly_right" :
+                      trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
               }
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
@@ -368,9 +368,9 @@ export default function GamePage() {
               initial="played"
               animate={
                 trickState.animatingTo === "top" ? "fly_top" :
-                trickState.animatingTo === "left" ? "fly_left" :
-                trickState.animatingTo === "right" ? "fly_right" :
-                trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
+                  trickState.animatingTo === "left" ? "fly_left" :
+                    trickState.animatingTo === "right" ? "fly_right" :
+                      trickState.animatingTo === "bottom" ? "fly_bottom" : "played"
               }
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
@@ -408,61 +408,59 @@ export default function GamePage() {
       </div>
 
       {/* MY HAND & CHATTER BOX (Bottom Section) */}
-      <div className="h-28 md:h-36 flex-shrink-0 z-20 relative px-6 pb-2 md:pb-4 flex justify-between items-end pointer-events-auto">
-        {/* Bottom Left: Sami's Avatar and Hand Area */}
-        <div className="flex items-end gap-6">
-          <div className="mb-2">
-            <PlayerSeat
-              player={seats[relativeSeats.bottom]}
-              isYou
-              isTurn={isYourTurn}
-              onAvatarClick={setSelectedPlayerId}
-            />
-          </div>
+      <div className="h-28 md:h-36 flex-shrink-0 z-20 relative px-6 pb-2 md:pb-4 flex justify-center items-end pointer-events-auto">
+        {/* Bottom Left: Sami's Avatar */}
+        <div className="absolute bottom-1 left-2 mb-1">
+          <PlayerSeat
+            player={seats[relativeSeats.bottom]}
+            isYou
+            isTurn={isYourTurn}
+            onAvatarClick={setSelectedPlayerId}
+          />
+        </div>
 
-          {/* Fanned Cards */}
-          <div className="flex items-end pb-1.5 md:pb-3 relative perspective-1000">
-            {yourHand?.length > 0 ? (
-              yourHand.map((card, idx) => {
-                const n = yourHand.length;
-                const centerIndex = (n - 1) / 2;
-                const angle = (idx - centerIndex) * 3.5;
-                const yOffset = Math.pow(Math.abs(idx - centerIndex), 2) * 1.1;
+        {/* Fanned Cards (Centered) */}
+        <div className="flex items-end pb-1.5 md:pb-3 relative perspective-1000">
+          {yourHand?.length > 0 ? (
+            yourHand.map((card, idx) => {
+              const n = yourHand.length;
+              const centerIndex = (n - 1) / 2;
+              const angle = (idx - centerIndex) * 3.5;
+              const yOffset = Math.pow(Math.abs(idx - centerIndex), 2) * 1.1;
 
-                return (
-                  <div
-                    key={card}
+              return (
+                <div
+                  key={card}
+                  style={{
+                    transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
+                    transformOrigin: "bottom center",
+                    zIndex: idx + 10,
+                    marginLeft: idx === 0 ? 0 : "clamp(-48px, -3.2vw, -36px)",
+                  }}
+                  className="relative transition-all duration-300 hover:-translate-y-8 hover:z-50"
+                >
+                  <PlayingCard
+                    card={card}
+                    playable={isYourTurn && gamePhase === "playing"}
+                    onClick={() => handlePlayCard(card)}
+                    className="shadow-2xl playing-card"
                     style={{
-                      transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
-                      transformOrigin: "bottom center",
-                      zIndex: idx + 10,
-                      marginLeft: idx === 0 ? 0 : "min(-4.5vw, -50px)",
+                      width: "clamp(68px, 6vw, 90px)",
+                      height: "clamp(102px, 9vw, 135px)",
                     }}
-                    className="relative transition-all duration-300 hover:-translate-y-8 hover:z-50"
-                  >
-                    <PlayingCard
-                      card={card}
-                      playable={isYourTurn && gamePhase === "playing"}
-                      onClick={() => handlePlayCard(card)}
-                      className="shadow-2xl"
-                      style={{
-                        width: "min(7vw, 90px)",
-                        height: "min(10.5vw, 135px)",
-                      }}
-                    />
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-slate-300 font-bold bg-slate-900/60 border border-slate-700/80 px-5 py-2 rounded-full text-xs shadow-lg self-center">
-                {gamePhase === "trump_selection" ? "Waiting for trump declaration…" : "Waiting for game to start…"}
-              </p>
-            )}
-          </div>
+                  />
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-slate-300 font-bold bg-slate-900/60 border border-slate-700/80 px-5 py-2 rounded-full text-xs shadow-lg self-center">
+              {gamePhase === "trump_selection" ? "Waiting for trump declaration…" : "Waiting for game to start…"}
+            </p>
+          )}
         </div>
 
         {/* Bottom Right: Chatter Panel */}
-        <div className="w-56 md:w-72 h-[100px] md:h-[150px] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-30 mr-2">
+        <div className="w-56 md:w-72 h-[100px] room-chat md:h-[150px] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-30 mr-2">
           <ChatPanel />
         </div>
       </div>
